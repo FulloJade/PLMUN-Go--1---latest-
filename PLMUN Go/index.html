@@ -107,8 +107,14 @@
 
           <!-- 50/50 Split Box -->
           <div class="ai-result-box">
-            <div class="ai-text-side">
+           <div class="ai-text-side">
               <p id="ai-response">Hello! How can I help you navigate PLMun today?</p>
+              
+              <!-- Voice Controls -->
+              <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button type="button" id="pause-btn" class="send-btn" style="position: static; padding: 6px 12px; background: #0ea5e9;"><i class="fa-solid fa-pause"></i> Pause</button>
+                <button type="button" id="mute-btn" class="send-btn" style="position: static; padding: 6px 12px; background: #64748b;"><i class="fa-solid fa-volume-high"></i> Mute</button>
+              </div>
             </div>
             
             <div class="ai-image-side" id="ai-image-container">
@@ -415,6 +421,42 @@
       const clearButton = document.getElementById('clear-btn');
       const aiResponseDiv = document.getElementById('ai-response');
       const aiImageDiv = document.getElementById('ai-image');
+      const pauseBtn = document.getElementById('pause-btn');
+      const muteBtn = document.getElementById('mute-btn');
+      let isMuted = false;
+      let isPaused = false;
+
+      // Mute Toggle Logic
+      if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+          isMuted = !isMuted;
+          if (isMuted) {
+            window.speechSynthesis.cancel(); // Stop speaking immediately
+            muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> Unmute';
+            muteBtn.style.background = '#dc2626'; // Turns red when muted
+          } else {
+            muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Mute';
+            muteBtn.style.background = '#64748b'; // Returns to grey
+          }
+        });
+      }
+
+      // Pause/Resume Logic
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+          if (window.speechSynthesis.speaking) {
+            if (isPaused) {
+              window.speechSynthesis.resume();
+              isPaused = false;
+              pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+            } else {
+              window.speechSynthesis.pause();
+              isPaused = true;
+              pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> Resume';
+            }
+          }
+        });
+      }
 
       // Central Campus Location Directory (Data Object)
       const campusDirectory = {
@@ -514,8 +556,14 @@
     
             // Voice over code:
             window.speechSynthesis.cancel(); // Stops any currently playing audio
-            const speech = new SpeechSynthesisUtterance(location.text);
-            window.speechSynthesis.speak(speech);
+            if (!isMuted) {
+              const speech = new SpeechSynthesisUtterance(location.text);
+              window.speechSynthesis.speak(speech);
+              
+              // Reset the pause button state for the new message
+              isPaused = false;
+              if (pauseBtn) pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+            }
             
             if (location.image) {
               const img = document.createElement("img");
