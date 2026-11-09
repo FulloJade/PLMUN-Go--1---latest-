@@ -509,8 +509,13 @@
         for (let key in campusDirectory) {
           if (query.includes(key)) {
             const location = campusDirectory[key];
-            
+    
             aiResponseDiv.textContent = location.text;
+    
+            // Voice over code:
+            window.speechSynthesis.cancel(); // Stops any currently playing audio
+            const speech = new SpeechSynthesisUtterance(location.text);
+            window.speechSynthesis.speak(speech);
             
             if (location.image) {
               const img = document.createElement("img");
@@ -526,7 +531,13 @@
         }
 
         if (!foundMatch) {
-          aiResponseDiv.textContent = "❓ Sorry, I don't have information for that exact room. Try searching for: clinic, library, registrar, admission, citcs, treasury, or president.";
+          const fallbackText = "Sorry, I don't have information for that exact room. Try searching for: clinic, library, registrar, admission, citcs, treasury, or president.";
+          aiResponseDiv.textContent = "❓ " + fallbackText;
+          
+          // Voice over code:
+          window.speechSynthesis.cancel();
+          const errorSpeech = new SpeechSynthesisUtterance(fallbackText);
+          window.speechSynthesis.speak(errorSpeech);
         }
       }
 
@@ -538,6 +549,9 @@
       }
       if (clearButton) {
         clearButton.addEventListener('click', () => {
+          // Voice over cancel code:
+          window.speechSynthesis.cancel(); 
+    
           userInput.value = "";
           aiResponseDiv.textContent = "Hello! How can I help you navigate PLMun today?";
           aiImageDiv.innerHTML = "";
