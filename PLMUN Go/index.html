@@ -555,9 +555,12 @@
             aiResponseDiv.textContent = location.text;
     
             // Voice over code:
+            // Voice over code:
             window.speechSynthesis.cancel(); // Stops any currently playing audio
             if (!isMuted) {
-              const speech = new SpeechSynthesisUtterance(location.text);
+              // Removes emojis before speaking
+              const cleanText = location.text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+              const speech = new SpeechSynthesisUtterance(cleanText);
               window.speechSynthesis.speak(speech);
               
               // Reset the pause button state for the new message
