@@ -543,6 +543,8 @@
       function processUserQuestion() {
         if (!userInput) return;
         const query = userInput.value.toLowerCase().trim();
+        if (!query) return;
+
         if (window.PLMunRoute && window.PLMunRoute.handle(query)) return;
 
         let foundMatch = false;
@@ -582,6 +584,8 @@
         }
 
         if (!foundMatch && window.PLMunRoute && window.PLMunRoute.locate(query)) foundMatch = true;
+
+        if (!foundMatch) {
           const fallbackText = "Sorry, I don't have information for that exact room. Try searching for: clinic, library, registrar, admission, citcs, treasury, or president.";
           aiResponseDiv.textContent = "❓ " + fallbackText;
           
