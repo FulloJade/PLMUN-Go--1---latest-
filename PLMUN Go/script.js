@@ -341,3 +341,78 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+// ==========================================
+// AI ASSISTANT READ ALOUD (TOGGLE: READ -> PAUSE -> PLAY)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const readAloudBtn = document.getElementById('read-aloud-btn');
+  const aiResponse = document.getElementById('ai-response');
+  const clearBtn = document.getElementById('clear-btn');
+
+  const resetBtnUI = () => {
+    if (readAloudBtn) {
+      readAloudBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i> Read aloud';
+    }
+  };
+
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    resetBtnUI();
+  };
+
+  if (readAloudBtn) {
+    readAloudBtn.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) return;
+
+      const synth = window.speechSynthesis;
+
+      // 1. If currently PAUSED -> Resume speech & show Pause button
+      if (synth.speaking && synth.paused) {
+        synth.resume();
+        readAloudBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+        return;
+      }
+
+      // 2. If currently SPEAKING -> Pause speech & show Play button
+      if (synth.speaking && !synth.paused) {
+        synth.pause();
+        readAloudBtn.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+        return;
+      }
+
+      // 3. Otherwise (IDLE) -> Start new speech
+      const rawText = aiResponse ? aiResponse.textContent.trim() : '';
+      if (!rawText) return;
+
+      // Strip emojis and decorative symbols
+      const cleanText = rawText
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1F1E6}-\u{1F1FF}]/gu, '')
+        .replace(/[^\w\s.,?!'()-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!cleanText) return;
+
+      synth.cancel(); // Stop any active queue
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+
+      // Reset button UI when audio finishes or errors out
+      utterance.onend = resetBtnUI;
+      utterance.onerror = resetBtnUI;
+
+      synth.speak(utterance);
+      readAloudBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      stopSpeaking();
+      if (aiResponse) aiResponse.textContent = 'How can I help you navigate PLMun today?';
+    });
+  }
+});

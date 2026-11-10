@@ -111,9 +111,12 @@
               <p id="ai-response">Hello! How can I help you navigate PLMun today?</p>
               
               <!-- Voice Controls -->
-              <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button type="button" id="pause-btn" class="send-btn" style="position: static; padding: 6px 12px; background: #0ea5e9;"><i class="fa-solid fa-pause"></i> Pause</button>
-                <button type="button" id="mute-btn" class="send-btn" style="position: static; padding: 6px 12px; background: #64748b;"><i class="fa-solid fa-volume-high"></i> Mute</button>
+              <!-- Replace your current Read aloud button block with this -->
+              <!-- Replace your current #ai-controls-row block with this -->
+              <div class="ai-controls-row" id="ai-controls-row">
+                <button type="button" id="read-aloud-btn">
+                  <i class="fa-solid fa-volume-high"></i> Read aloud
+                </button>
               </div>
             </div>
             
@@ -1744,16 +1747,10 @@
         resetAnswerLayout();
 
         // Restroom questions: answer by building + floor
-        const cr = restroomAnswer(query);
+       const cr = restroomAnswer(query);
         if (cr) {
           renderAnswer(cr);
-          window.speechSynthesis.cancel();
-          if (!isMuted) {
-            const spoken = cr.title + '. ' + cr.items.map(i => (i.where ? i.where.replace('·', ',') + ': ' : '') + i.text).join(' ');
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(spoken));
-            isPaused = false;
-            if (pauseBtn) pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
-          }
+          window.speechSynthesis.cancel(); // Stops previous speech, does NOT auto-read
           return;
         }
 
@@ -1764,43 +1761,26 @@
 
         // longest keyword first, so "psychology clinic" wins over "clinic"
         const sortedKeys = Object.keys(campusDirectory).sort((a, b) => b.length - a.length);
-        for (let key of sortedKeys) {
-          if (query.includes(key)) {
-            const location = campusDirectory[key];
-    
-            renderText(location.text);
-    
-            // Voice over code:
-            // Voice over code:
-            window.speechSynthesis.cancel(); // Stops any currently playing audio
-            if (!isMuted) {
-              // Removes emojis before speaking
-              const cleanText = location.text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
-              const speech = new SpeechSynthesisUtterance(cleanText);
-              window.speechSynthesis.speak(speech);
-              
-              // Reset the pause button state for the new message
-              isPaused = false;
-              if (pauseBtn) pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
-            }
-            
-            showImages(location.images || (location.image ? [location.image] : []));
+       for (let key of sortedKeys) {
+        if (query.includes(key)) {
+          const location = campusDirectory[key];
 
-            foundMatch = true;
-            break;
-          }
+          renderText(location.text);
+          window.speechSynthesis.cancel(); // Stops previous speech, does NOT auto-read
+
+          showImages(location.images || (location.image ? [location.image] : []));
+
+          foundMatch = true;
+          break;
         }
+      }
 
         if (!foundMatch && window.PLMunRoute && window.PLMunRoute.locate(query)) foundMatch = true;
 
         if (!foundMatch) {
           const fallbackText = "Sorry, I don't have information for that exact room. Try searching for: clinic, library, registrar, admission, citcs, treasury, or president.";
           renderPlain("❓ " + fallbackText);
-          
-          // Voice over code:
-          window.speechSynthesis.cancel();
-          const errorSpeech = new SpeechSynthesisUtterance(fallbackText);
-          window.speechSynthesis.speak(errorSpeech);
+          window.speechSynthesis.cancel(); // Stops previous speech, does NOT auto-read
         }
       }
 

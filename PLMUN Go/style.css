@@ -4854,3 +4854,41 @@ body.campuslife-page {
   .ans-thumb { flex: none; width: 100%; height: 150px; }
   .ai-photo-tile { height: 110px; }
 }
+/* ==========================================
+   AI ACTION BUTTONS FLEX FIX
+   ========================================== */
+.ai-controls-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  margin-top: 15px !important;
+  width: 100% !important;
+}
+
+/* Force both buttons to stay in flex flow instead of floating to the right */
+#read-aloud-btn,
+#directions-btn {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 0.88rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+#read-aloud-btn {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+#directions-btn {
+  background: #16a34a !important;
+  color: #ffffff !important;
+}

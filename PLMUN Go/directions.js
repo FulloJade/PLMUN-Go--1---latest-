@@ -328,9 +328,9 @@
   function buildPanel() {
     var card = document.querySelector('.ai-card-wrapper');
     var resultBox = document.querySelector('.ai-result-box');
-    var voiceRow = document.getElementById('pause-btn') ? document.getElementById('pause-btn').parentElement : null;
+    // Change this line in directions.js:
+    var voiceRow = document.getElementById('ai-controls-row') || (document.getElementById('read-aloud-btn') ? document.getElementById('read-aloud-btn').parentElement : null);
     if (!card || !resultBox) return false;
-
     // Directions button next to Pause / Mute
     dirBtn = document.createElement('button');
     dirBtn.type = 'button';
@@ -339,10 +339,11 @@
     dirBtn.setAttribute('aria-expanded', 'false');
     dirBtn.innerHTML = '<i class="fa-solid fa-route"></i> Directions';
     if (voiceRow) {
+      voiceRow.style.display = 'flex';
+      voiceRow.style.justifyContent = 'flex-start';
+      voiceRow.style.gap = '12px';
       voiceRow.style.flexWrap = 'wrap';
-      voiceRow.appendChild(dirBtn);
-    } else {
-      resultBox.parentNode.insertBefore(dirBtn, resultBox.nextSibling);
+      voiceRow.insertBefore(dirBtn, voiceRow.firstChild);
     }
 
     panel = document.createElement('div');
