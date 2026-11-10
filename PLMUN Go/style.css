@@ -4624,3 +4624,233 @@ body.campuslife-page {
   .page-chips { top: 62px; }
   .to-top { right: 12px; bottom: 12px; }
 }
+
+/* ==========================================================================
+   NICE AI ANSWERS (cards + picture gallery)
+   Paste at the VERY BOTTOM of style.css (Ctrl+End), then Ctrl+F5
+   ========================================================================== */
+
+/* Text panel: more breathing room */
+#ai-response {
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  line-height: 1.6;
+  min-height: 65px;
+}
+
+.ai-result-box {
+  gap: 24px;
+  padding: 28px;
+}
+
+/* --- Answer header --- */
+.ans-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.ans-icon {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(253, 224, 71, 0.18);
+  border-radius: 14px;
+}
+
+.ans-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  color: #ffffff;
+}
+
+/* --- Cards (scrolls if the answer is very long) --- */
+.ans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ans-list::-webkit-scrollbar { width: 6px; }
+.ans-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 6px; }
+
+.ans-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: rgba(8, 30, 66, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 4px solid #fde047;
+  border-radius: 14px;
+}
+
+.ans-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ans-where {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fde047;
+  margin-bottom: 5px;
+}
+
+.ans-where i {
+  margin-right: 4px;
+}
+
+.ans-text {
+  margin: 0;
+  font-size: 0.97rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+}
+
+/* --- Pictures --- */
+.ai-photo {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: zoom-in;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ai-photo .ai-facility-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ai-photo figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 10px 7px;
+  font-size: 0.78rem;
+  color: #ffffff;
+  background: linear-gradient(transparent, rgba(8, 30, 66, 0.92));
+}
+
+.ai-photo.missing {
+  cursor: default;
+}
+
+.ai-photo.missing figcaption {
+  display: none;
+}
+
+.ai-photo-missing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.ai-photo-missing i {
+  font-size: 1.5rem;
+}
+
+/* one picture on the right */
+.ai-photo-single {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* small picture inside a card (CR lists) */
+.ans-thumb {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 84px;
+}
+
+/* 2+ pictures on the right = gallery */
+.ai-image-side.gallery {
+  height: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  display: block;
+  padding: 12px;
+}
+
+.ai-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.ai-photo-tile {
+  height: 130px;
+}
+
+/* many pictures in the card list: use the full width */
+.ai-result-box.ai-multi {
+  grid-template-columns: 1fr;
+}
+
+.ai-result-box.ai-multi .ai-image-side {
+  display: none;
+}
+
+/* --- Click a picture to enlarge --- */
+#ai-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgba(8, 30, 66, 0.92);
+  cursor: zoom-out;
+}
+
+#ai-lightbox.open {
+  display: flex;
+}
+
+#ai-lightbox img {
+  width: auto;
+  height: auto;
+  max-width: 92vw;
+  max-height: 78vh;
+  border-radius: 14px;
+}
+
+#ai-lightbox .lb-cap {
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+/* --- Phones --- */
+@media (max-width: 768px) {
+  .ai-result-box { padding: 18px; }
+  #ai-response { padding: 16px; }
+  .ans-item { flex-direction: column; align-items: stretch; gap: 10px; }
+  .ans-thumb { flex: none; width: 100%; height: 150px; }
+  .ai-photo-tile { height: 110px; }
+}
