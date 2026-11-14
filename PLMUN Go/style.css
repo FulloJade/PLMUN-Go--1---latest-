@@ -5092,79 +5092,11 @@ body.campuslife-page {
   .here-pill { left: 10px; bottom: 10px; max-width: calc(100vw - 90px); }
 }
 
-/* ===== 3D MAP BUTTON (under the campus map picture) ===== */
-.map3d-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 14px;
-  padding: 12px 16px;
-  background: #081e42;
-  color: #ffffff;
-  border-radius: 14px;
-  text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
- 
-.map3d-bar:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(8, 30, 66, 0.3);
-}
- 
-.map3d-bar img {
-  width: 96px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
- 
-.map3d-bar-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
- 
-.map3d-bar-text strong {
-  font-size: 1.05rem;
-  color: #ffffff;
-}
- 
-.map3d-bar-text small {
-  font-size: 0.82rem;
-  color: #cbd5e1;
-}
- 
-.map3d-bar-btn {
-  background: #fde047;
-  color: #081e42;
-  font-weight: 700;
-  padding: 10px 18px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
- 
-@media (max-width: 640px) {
-  .map3d-bar {
-    flex-wrap: wrap;
-  }
- 
-  .map3d-bar-text {
-    flex-basis: 60%;
-  }
- 
-  .map3d-bar-btn {
-    width: 100%;
-    text-align: center;
-  }
-}
- 
 /* ===== "Explore Map in 3D" button sitting on the map photo ===== */
 .map-3d-fab {
   position: absolute;
   right: 3%;
-  bottom: 5%;
+  bottom: 14%;
   z-index: 20;
   display: inline-flex;
   align-items: center;
@@ -5191,10 +5123,6 @@ body.campuslife-page {
     padding: 8px 14px;
     font-size: 0.78rem;
     right: 3%;
-    bottom: 4%;
+    bottom: 10%;
   }
 }
- 
-NOTE: keep or delete the banner under the map - the two buttons don't affect each other,
-so your groupmates can vote and you just delete the one nobody picks.
- 
