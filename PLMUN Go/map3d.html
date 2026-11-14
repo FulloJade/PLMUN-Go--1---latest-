@@ -86,11 +86,11 @@
       mabini:    { x0: 9,  x1: 26, z0: 24, z1: 32.5, floors: 3, color: '#3b7dd8', mode: 'north', label: 'Student Center' },
       bonifacio: { x0: 33, x1: 54, z0: 24, z1: 32.5, floors: 4, color: '#2f9e63', mode: 'two',   label: 'Main (Bonifacio)' },
       delpilar:  { x0: 57, x1: 73, z0: 24, z1: 32.5, floors: 5, color: '#d19a2a', mode: 'two',   label: 'Admin (Del Pilar)' },
-      rizal:     { x0: 40, x1: 72, z0: 40, z1: 48,   floors: 4, color: '#8b5cf6', mode: 'south', label: 'RLRC (Rizal)', flip: true }
+      rizal:     { x0: 40, x1: 73.5, z0: 47, z1: 55,   floors: 4, color: '#8b5cf6', mode: 'south', label: 'RLRC (Rizal)', flip: true }
     };
     var ORDER = ['mabini', 'bonifacio', 'delpilar', 'rizal'];
     var NAMES = { mabini: 'Student Center', bonifacio: 'Main (Bonifacio)', delpilar: 'Admin (Del Pilar)', rizal: 'RLRC (Rizal)' };
-    var WALK_Z = 34.5, GATE = { x: 7, z: 56 };
+    var WZ = 37.4, QZ = 34.2, RZ = 46.2, GATE = { x: 7, z: 68 };   // road in the west pocket, walkway in front of Main/Admin, walkway in front of the RLRC
 
     function rowDepth(g) { return 3; }
     // rectangle of one cell on a floor plan
@@ -111,7 +111,7 @@
     }
 
     /* ===== 2. camera ===== */
-    var cam = { yaw: 0.25, pitch: 1.0, dist: 128, tx: 43, ty: 0, tz: 38 }, goal = null;
+    var cam = { yaw: 0.25, pitch: 1.22, dist: 138, tx: 43, ty: 0, tz: 43 }, goal = null;
     var W = 0, Hh = 0, dpr = 1, FOV = 1, CX = 0, CY = 0;
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -234,21 +234,29 @@
     var TREES = (function () {
       var out = [], id = 1;
       function scatter(x0, x1, z0, z1, n) { for (var i = 0; i < n; i++) { id++; out.push({ x: x0 + rnd(id) * (x1 - x0), z: z0 + rnd(id + 99) * (z1 - z0), h: 3.6 + rnd(id + 7) * 2.6, pine: rnd(id + 3) > 0.7, c: Math.floor(rnd(id + 11) * 4) }); } }
-      scatter(-3, 4.2, 22, 60, 7);        // west edge
-      scatter(9.5, 25.5, 43, 46.5, 6);       // Serenity Garden
-      scatter(30, 52, 52.5, 56, 8);         // Centennial Park
+      scatter(-3, 4.2, 22, 70, 8);         // west edge
       scatter(2, 86, 14.5, 20, 16);        // behind the buildings
-      scatter(77, 88, 20, 62, 9);         // east side / North Park
-      scatter(56, 76, 53, 60, 6);
-      [[30.8, 38.6], [72.2, 38.6], [72.2, 33.8]].forEach(function (p) { id++; out.push({ x: p[0], z: p[1], h: 4.5, pine: false, c: 1 }); });
+      scatter(77, 88, 20, 70, 10);         // east side
+      scatter(30, 52, 60, 64, 8);          // Centennial Park
+      scatter(56, 76, 66, 71, 6);
+      // Serenity Garden: lots of trees around the stone seats
+      [[16.2, 46.6], [17.4, 50.2], [23.6, 46.4], [24.8, 49.6], [15.8, 49.2], [21.2, 51.2], [25.4, 47.8]].forEach(function (p, i) { id++; out.push({ x: p[0], z: p[1], h: 5 + (i % 3), pine: i % 4 === 3, c: i % 4 }); });
+      // quadrangle corners
+      [[30.8, 36.4], [30.8, 44.6], [52.6, 36.4], [52.6, 44.6]].forEach(function (p) { id++; out.push({ x: p[0], z: p[1], h: 4.4, pine: false, c: 1 }); });
+      // the BIG shade tree of North Park
+      out.push({ x: 69.8, z: 40.6, h: 12.5, pine: false, c: 0, big: true });
       return out;
     })();
     var CANOPY = ['#2f8f46', '#3aa655', '#287a3c', '#4db35f'];
     function drawTree(t) {
       var base = proj(t.x, 0, t.z), mid = proj(t.x, t.h * 0.45, t.z), top = proj(t.x, t.h, t.z);
-      var r = FOV * (t.h * 0.30) / base.d, rt = r;
+      var r = FOV * (t.h * (t.big ? 0.36 : 0.30)) / base.d;
+      if (t.big) {        // cool shade on the ground
+        var sh = []; for (var k = 0; k < 24; k++) { var an = k / 24 * 6.2832; sh.push([t.x + Math.cos(an) * 5.2, t.z + Math.sin(an) * 5.2]); }
+        flatPoly(sh, 0.09, '#0b3b1a', 0.28);
+      }
       ctx.beginPath(); ctx.ellipse(base.x + r * 0.3, base.y, r * 0.9, r * 0.32, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fill();
-      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(mid.x, mid.y); ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = Math.max(1.5, r * 0.28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(mid.x, mid.y); ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = Math.max(1.5, r * (t.big ? 0.34 : 0.28)); ctx.stroke();
       var col = CANOPY[t.c];
       if (t.pine) {
         var ap = proj(t.x, t.h * 1.12, t.z), bs = proj(t.x, t.h * 0.3, t.z);
@@ -258,7 +266,8 @@
         var cy_ = (mid.y + top.y) / 2 - r * 0.15;
         var gr = ctx.createRadialGradient(top.x - r * 0.3, cy_ - r * 0.4, r * 0.1, top.x, cy_, r * 1.1);
         gr.addColorStop(0, '#8fdc8a'); gr.addColorStop(0.45, col); gr.addColorStop(1, '#1d5e31');
-        ctx.beginPath(); ctx.arc(top.x, cy_, r * 1.05, 0, 7); ctx.fillStyle = gr; ctx.fill();
+        ctx.beginPath(); ctx.arc(top.x, cy_, r * (t.big ? 1.25 : 1.05), 0, 7); ctx.fillStyle = gr; ctx.fill();
+        if (t.big) { ctx.beginPath(); ctx.arc(top.x - r * 0.8, cy_ + r * 0.35, r * 0.75, 0, 7); ctx.fillStyle = gr; ctx.fill(); ctx.beginPath(); ctx.arc(top.x + r * 0.85, cy_ + r * 0.3, r * 0.7, 0, 7); ctx.fill(); }
       }
     }
     function roadSeg(x0, z0, x1, z1, w) {          // flat road strip between two points (axis aligned)
@@ -266,48 +275,71 @@
       if (x0 === x1) flat(x0 - h, x0 + h, Math.min(z0, z1) - h, Math.max(z0, z1) + h, 0.05, '#4b5563');
       else flat(Math.min(x0, x1) - h, Math.max(x0, x1) + h, z0 - h, z0 + h, 0.05, '#4b5563');
     }
+    // sunken quadrangle
+    var QUAD = { x0: 29.8, x1: 53.4, z0: 35.4, z1: 45.4 };
     function drawGround() {
-      // island base
-      drawBox(-6, 92, -2.2, 0, 11, 65, '#8b6b4a', 1, { stroke: 'rgba(0,0,0,.25)' });
-      flat(-6, 92, 11, 65, 0, '#9cc98a');
-      // lawn stripes
-      for (var i = 0; i < 12; i++) flat(-6, 92, 11 + i * 4.5, 13.2 + i * 4.5, 0.01, '#94c382', 0.55);
+      drawBox(-6, 92, -2.2, 0, 11, 75, '#8b6b4a', 1, { stroke: 'rgba(0,0,0,.25)' });
+      flat(-6, 92, 11, 75, 0, '#9cc98a');
+      for (var i = 0; i < 14; i++) flat(-6, 92, 11 + i * 4.6, 13.3 + i * 4.6, 0.01, '#94c382', 0.55);
       // parks / gardens
-      flat(9, 26.5, 41.8, 47, 0.03, '#7fcf6a'); flat(76.5, 90, 36, 45, 0.03, '#7fcf6a'); flat(29.5, 53, 51.6, 56.2, 0.03, '#7fcf6a');
-      flat(62, 72, 52.5, 56.5, 0.04, '#5b8fd6');
-      // shadows of the buildings
+      flat(14.2, 26.6, 45, 52, 0.03, '#7fcf6a');                 // Serenity Garden
+      flat(66, 73.6, 35.6, 46, 0.03, '#79cf64');                 // North Park
+      flat(29.5, 53, 59.4, 64.4, 0.03, '#7fcf6a');               // Centennial Park
+      flat(62, 72.5, 60, 64.5, 0.04, '#5b8fd6');
+      // building shadows
       ORDER.forEach(function (bk) { var g = G[bk], hh = floorsOf(bk).length * H; flat(g.x0 + 1.2, g.x1 + 0.8 + hh * 0.25, g.z0 + 1, g.z1 + 1 + hh * 0.3, 0.04, '#000', 0.16); });
-      // ring road (as on the university map): gate -> west pocket -> north -> east -> south -> back to the quadrangle
-      roadSeg(7, 62, 7, 34.5, 3);
-      roadSeg(7, 34.5, 28, 34.5, 3);
-      roadSeg(28, 22, 28, 50, 2.8);
+      // ring road (as on the university map)
+      roadSeg(7, 70, 7, WZ, 3);
+      roadSeg(7, WZ, 28, WZ, 3);
+      roadSeg(28, 22, 28, 58, 2.8);
       roadSeg(28, 22, 75, 22, 2.8);
-      roadSeg(75, 22, 75, 50, 2.8);
-      roadSeg(28, 50, 75, 50, 2.8);
-      [[[7, 62], [7, 34.5], [28, 34.5]], [[28, 22], [75, 22], [75, 50], [28, 50], [28, 22]]].forEach(function (p) {
+      roadSeg(75, 22, 75, 58, 2.8);
+      roadSeg(28, 58, 75, 58, 2.8);
+      [[[7, 70], [7, WZ], [28, WZ]], [[28, 22], [75, 22], [75, 58], [28, 58], [28, 22]]].forEach(function (p) {
         ctx.setLineDash([6, 6]); stroke3(p, 'rgba(255,255,255,.75)', 1.2, 0.06); ctx.setLineDash([]);
       });
-      // the QUADRANGLE: paved open space between the Main/Admin row and the RLRC
-      flat(29.4, 73.6, 32.5, 40, 0.06, '#e6dcc3');
-      ctx.strokeStyle = 'rgba(120,100,60,.28)'; ctx.lineWidth = 1;
-      for (var x = 29.4; x <= 73.7; x += 4.43) { var p1 = proj(x, 0.07, 32.5), p2 = proj(x, 0.07, 40); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
-      for (var z = 32.5; z <= 40.1; z += 1.9) { var q1 = proj(29.4, 0.07, z), q2 = proj(73.6, 0.07, z); ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.stroke(); }
+      // walkways in front of Main/Admin and in front of the RLRC
+      flat(29.4, 73.6, 32.5, QUAD.z0, 0.06, '#d9d3c3');
+      flat(29.4, 73.6, QUAD.z1, 46.9, 0.06, '#d9d3c3');
+      // parking lot in front of Del Pilar (employees' cars)
+      flat(57.4, 73.6, 32.5, 35.4, 0.07, '#6b7280');
+      flat(57.4, 65.4, 35.4, 46, 0.07, '#6b7280');
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1;
+      for (var px = 58.2; px < 65.3; px += 1.6) { var a1 = proj(px, 0.08, 36.4), a2 = proj(px, 0.08, 38.4); ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.stroke(); var c1 = proj(px, 0.08, 42.6), c2 = proj(px, 0.08, 44.6); ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y); ctx.stroke(); }
+      for (var qx = 58.4; qx < 73.5; qx += 1.7) { if (qx > 66.2 && qx < 71) continue; var b1 = proj(qx, 0.08, 33.0), b2 = proj(qx, 0.08, 34.7); ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }
+      // the QUADRANGLE: big, paved and LOWER than the walkways around it
+      var qb = QUAD, cu = '#cbd5e1';
+      flat(qb.x0, qb.x1, qb.z0, qb.z1, -0.3, '#e0d2b0');
+      ctx.strokeStyle = 'rgba(120,100,60,.25)'; ctx.lineWidth = 1;
+      for (var x = qb.x0; x <= qb.x1 + 0.1; x += 2.95) { var p1 = proj(x, -0.28, qb.z0), p2 = proj(x, -0.28, qb.z1); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+      for (var z = qb.z0; z <= qb.z1 + 0.1; z += 2.5) { var q1 = proj(qb.x0, -0.28, z), q2 = proj(qb.x1, -0.28, z); ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.stroke(); }
       // the walkway to the RLRC through the gap between Main and Admin
-      flat(54.2, 56.8, 32.5, 40, 0.08, '#f3efe3');
+      flat(54.4, 56.6, 32.5, 46.9, 0.08, '#f3efe3');
       // fountain
-      var fc = [45, 36.3], ring = [], ring2 = [];
-      for (var k = 0; k < 24; k++) { var an = k / 24 * 6.2832; ring.push([fc[0] + Math.cos(an) * 2.6, fc[1] + Math.sin(an) * 2.6]); ring2.push([fc[0] + Math.cos(an) * 2.0, fc[1] + Math.sin(an) * 2.0]); }
-      flatPoly(ring, 0.35, '#cbd5e1'); flatPoly(ring2, 0.4, '#7cc4ec');
-      // benches
-      [[36, 39.2], [41, 39.2], [50, 39.2], [62, 39.2], [66, 33.4]].forEach(function (p) { drawBox(p[0] - 0.9, p[0] + 0.9, 0.0, 0.6, p[1] - 0.3, p[1] + 0.3, '#8b5a2b', 1); });
-      // flag pole
-      var fb = proj(66.5, 0.1, 36.3), ft = proj(66.5, 10, 36.3), fl = proj(68.3, 9.2, 36.3), fl2 = proj(68.3, 8, 36.3), fl3 = proj(66.5, 8, 36.3);
-      ctx.beginPath(); ctx.moveTo(fb.x, fb.y); ctx.lineTo(ft.x, ft.y); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(ft.x, ft.y); ctx.lineTo(fl.x, fl.y); ctx.lineTo(fl2.x, fl2.y); ctx.lineTo(fl3.x, fl3.y); ctx.closePath(); ctx.fillStyle = '#c0392b'; ctx.fill();
-      var qp = proj(58, 0.1, 36.3); labels.push({ t: 'Quadrangle', x: qp.x, y: qp.y, s: 12, c: '#5b4a22', bg: 'rgba(255,255,255,.7)' });
-      var sp = proj(17, 0.1, 44.5); labels.push({ t: 'Serenity Garden', x: sp.x, y: sp.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
-      var cp2 = proj(41, 0.1, 54); labels.push({ t: 'Centennial Park', x: cp2.x, y: cp2.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
-      var np = proj(83, 0.1, 40.5); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
+      var fc = [41.6, 40.4], ring = [], ring2 = [];
+      for (var k = 0; k < 24; k++) { var an = k / 24 * 6.2832; ring.push([fc[0] + Math.cos(an) * 2.7, fc[1] + Math.sin(an) * 2.7]); ring2.push([fc[0] + Math.cos(an) * 2.1, fc[1] + Math.sin(an) * 2.1]); }
+      flatPoly(ring, 0.05, '#cbd5e1'); flatPoly(ring2, 0.08, '#7cc4ec');
+      // label spots
+      var qp = proj(47, 0, 40.4); labels.push({ t: 'Quadrangle', x: qp.x, y: qp.y, s: 13, c: '#5b4a22', bg: 'rgba(255,255,255,.75)' });
+      var sp = proj(20.4, 0.1, 51.6); labels.push({ t: 'Serenity Garden', x: sp.x, y: sp.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
+      var cp2 = proj(41, 0.1, 62.4); labels.push({ t: 'Centennial Park', x: cp2.x, y: cp2.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
+      var np = proj(69.8, 0.1, 45.4); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
+      var pk = proj(61.4, 0.1, 40.6); labels.push({ t: 'Parking', x: pk.x, y: pk.y, s: 10, c: '#fff', bg: 'rgba(55,65,81,.85)' });
+    }
+    function curbs() {              // the low walls that make the quadrangle look sunken
+      var q = QUAD, c = '#b8c2cf';
+      drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z0 - 0.4, q.z0, c, 1, { stroke: 'rgba(8,30,66,.35)' });
+      drawBox(q.x0 - 0.4, q.x0, -0.35, 0.12, q.z0, q.z1, c, 1, { stroke: 'rgba(8,30,66,.35)' });
+      drawBox(q.x1, q.x1 + 0.4, -0.35, 0.12, q.z0, q.z1, c, 1, { stroke: 'rgba(8,30,66,.35)' });
+      drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z1, q.z1 + 0.4, c, 1, { stroke: 'rgba(8,30,66,.35)' });
+    }
+    function bench(x, z, along) {
+      if (along) drawBox(x - 0.9, x + 0.9, 0, 0.55, z - 0.28, z + 0.28, '#8b5a2b', 1); else drawBox(x - 0.28, x + 0.28, 0, 0.55, z - 0.9, z + 0.9, '#8b5a2b', 1);
+    }
+    function drawQuadProps() {
+      curbs();
+      bench(36, 36.3, true); bench(47, 36.3, true); bench(36, 44.6, true); bench(47, 44.6, true);
+      // flag pole is NOT here: it stands in front of Mabini (see drawStage)
     }
     function drawGate() {
       drawBox(GATE.x - 3.4, GATE.x - 2.6, 0, 4, GATE.z - .5, GATE.z + .5, '#f1f5f9', 1);
@@ -316,18 +348,74 @@
       var gp = proj(GATE.x, 5.8, GATE.z); labels.push({ t: 'Main Gate', x: gp.x, y: gp.y, s: 12, c: '#fff', bg: 'rgba(8,30,66,.85)' });
     }
     function drawCourt() {
-      var p = drawBox(12, 25, 0, 0.5, 36, 41, '#c98a2b', 1);
-      drawBox(12.4, 24.6, 0.5, 4.2, 36.4, 40.6, '#f4b740', 1, { stroke: 'rgba(8,30,66,.5)' });
-      drawBox(11.8, 25.2, 4.2, 4.7, 35.8, 41.2, '#b45309', 1);
+      var p = drawBox(12, 25, 0, 0.5, 39.8, 44.4, '#c98a2b', 1);
+      drawBox(12.4, 24.6, 0.5, 4.2, 40.2, 44, '#f4b740', 1, { stroke: 'rgba(8,30,66,.5)' });
+      drawBox(11.8, 25.2, 4.2, 4.7, 39.6, 44.6, '#b45309', 1);
       labels.push({ t: 'Covered Court / Gym', x: p.x, y: p.y - 22, s: 11, c: '#fff', bg: 'rgba(8,30,66,.85)' });
     }
     function drawGazebo() {
-      var gz = drawBox(30.8, 34.2, 0, 0.5, 41.3, 44.7, '#d6c9a8', 1);
-      [[31.1, 41.6], [33.5, 41.6], [31.1, 44.0], [33.5, 44.0]].forEach(function (q) { drawBox(q[0], q[0] + 0.45, 0.5, 3, q[1], q[1] + 0.45, '#8b5a2b', 1); });
-      drawBox(30.4, 34.6, 3, 3.9, 40.9, 45.1, '#a8442f', 1);
+      var gz = drawBox(30.2, 34.2, 0, 0.5, 47.4, 51.4, '#d6c9a8', 1);
+      [[30.5, 47.7], [33.3, 47.7], [30.5, 50.5], [33.3, 50.5]].forEach(function (q) { drawBox(q[0], q[0] + 0.45, 0.5, 3, q[1], q[1] + 0.45, '#8b5a2b', 1); });
+      drawBox(29.8, 34.6, 3, 3.9, 47, 51.8, '#a8442f', 1);
+      drawBox(35.2, 39.4, 0, 2.6, 47.6, 50.2, '#3f7fd6', 1, { stroke: 'rgba(8,30,66,.5)' });     // the small building next to the Gazebo
       labels.push({ t: 'Gazebo', x: gz.x, y: gz.y - 28, s: 10, c: '#fff', bg: 'rgba(8,30,66,.8)' });
     }
     function drawStrip() { drawBox(54, 57, 0, 5 * H, 24, 32.5, '#aab2bd', route ? .25 : .95, { windows: !route }); }
+
+    // a raised landing with three levels (two steps up): used for the stage of Mabini and the entrance of Del Pilar
+    function drawSteps(x0, x1, z0, depth, label) {
+      var s1 = drawBox(x0, x1, 0, 0.6, z0, z0 + depth, '#c9b48a', 1, { stroke: 'rgba(60,40,10,.5)' });
+      drawBox(x0, x1, 0, 0.4, z0 + depth, z0 + depth + 0.7, '#d6c6a2', 1, { stroke: 'rgba(60,40,10,.5)' });
+      drawBox(x0, x1, 0, 0.2, z0 + depth + 0.7, z0 + depth + 1.4, '#e4d8bc', 1, { stroke: 'rgba(60,40,10,.5)' });
+      if (label) labels.push({ t: label, x: s1.x, y: s1.y - 4, s: 10, c: '#fff', bg: 'rgba(120,53,15,.85)' });
+    }
+    function drawMabiniStage() {
+      drawSteps(11, 24, 32.5, 2.4, 'Stage');
+      // the Philippine flag in front of Mabini
+      var base = proj(21.8, 0.6, 33.6), top = proj(21.8, 9.6, 33.6), a = proj(24.2, 9.6, 33.6), b = proj(24.2, 7.8, 33.6), c = proj(24.2, 6.0, 33.6), d = proj(21.8, 6.0, 33.6), m = proj(21.8, 7.8, 33.6), tr = proj(22.9, 7.8, 33.6);
+      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(top.x, top.y); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(m.x, m.y); ctx.closePath(); ctx.fillStyle = '#0038a8'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fillStyle = '#ce1126'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
+    }
+    function drawDelPilarSteps() { var dx = doorsX('delpilar'); drawSteps(dx - 2.6, dx + 2.6, 32.5, 1.2, null); }
+
+    // cars in the parking lot
+    var CARS = (function () {
+      var cols = ['#ef4444', '#f8fafc', '#1e293b', '#3b82f6', '#facc15', '#9ca3af', '#10b981', '#f97316'], out = [], i = 0;
+      for (var x = 58.9; x < 65.2; x += 1.6) { if (rnd(x * 3) > 0.35) out.push({ x: x, z: 37.5, c: cols[(i++) % cols.length], v: true }); if (rnd(x * 5) > 0.4) out.push({ x: x, z: 43.6, c: cols[(i++) % cols.length], v: true }); }
+      for (var y = 58.9; y < 73.4; y += 1.7) { if (y > 66.2 && y < 71) continue; if (rnd(y * 7) > 0.3) out.push({ x: y, z: 33.9, c: cols[(i++) % cols.length], v: true }); }
+      return out;
+    })();
+    function drawCar(c) {
+      drawBox(c.x - 0.55, c.x + 0.55, 0.15, 0.7, c.z - 1.0, c.z + 1.0, c.c, 1, { stroke: 'rgba(0,0,0,.45)' });
+      drawBox(c.x - 0.45, c.x + 0.45, 0.7, 1.15, c.z - 0.55, c.z + 0.55, '#bcd6ee', 1, { stroke: 'rgba(0,0,0,.4)' });
+    }
+    // hedges along the pathway to the RLRC
+    var HEDGES = (function () { var o = []; [[35.2, 37.8], [38.2, 40.8], [41.2, 43.8], [44.2, 46.2]].forEach(function (r) { o.push([53.8, 54.5, r[0], r[1]]); o.push([56.5, 57.2, r[0], r[1]]); }); return o; })();
+    function drawHedge(h) { drawBox(h[0], h[1], 0, 1.05, h[2], h[3], '#2f8a3e', 1, { stroke: 'rgba(10,50,20,.55)' }); }
+
+    // North Park: lunch tables and seats in the shade of the big tree
+    var TABLES = [[66.8, 38.2], [72.6, 38.2], [66.8, 43.2], [72.6, 43.2], [69.8, 36.6], [69.8, 44.4]];
+    function drawTable(t) {
+      drawBox(t[0] - 0.9, t[0] + 0.9, 0.7, 0.85, t[1] - 0.45, t[1] + 0.45, '#a16207', 1, { stroke: 'rgba(0,0,0,.4)' });
+      drawBox(t[0] - 0.8, t[0] - 0.7, 0, 0.7, t[1] - 0.3, t[1] + 0.3, '#6b4a2b', 1);
+      drawBox(t[0] + 0.7, t[0] + 0.8, 0, 0.7, t[1] - 0.3, t[1] + 0.3, '#6b4a2b', 1);
+      drawBox(t[0] - 0.9, t[0] + 0.9, 0.3, 0.42, t[1] - 0.95, t[1] - 0.6, '#8b5a2b', 1);
+      drawBox(t[0] - 0.9, t[0] + 0.9, 0.3, 0.42, t[1] + 0.6, t[1] + 0.95, '#8b5a2b', 1);
+    }
+    // Serenity Garden: ring of stone seats + lamps
+    var SEATS = (function () { var o = []; for (var k = 0; k < 16; k++) { if (k === 4) continue; var an = k / 16 * 6.2832; o.push([20.4 + Math.cos(an) * 3.6, 48.4 + Math.sin(an) * 3.1]); } return o; })();
+    function drawStoneSeat(p) { drawBox(p[0] - 0.55, p[0] + 0.55, 0, 0.5, p[1] - 0.3, p[1] + 0.3, '#a8a29e', 1, { stroke: 'rgba(0,0,0,.35)' }); }
+    var LAMPS = [[14.8, 45.6], [26, 45.6], [14.8, 51.4], [26, 51.4], [20.4, 45.2], [20.4, 52], [16.2, 48.4], [24.6, 48.4], [18, 44.6], [23, 44.6], [38.5, 36.2], [45, 44.6], [60.8, 46.4]];
+    function drawLamp(p) {
+      var b = proj(p[0], 0, p[1]), t = proj(p[0], 3.4, p[1]), r = FOV * 0.5 / b.d;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.strokeStyle = '#374151'; ctx.lineWidth = 2; ctx.stroke();
+      var gl = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, r * 5);
+      gl.addColorStop(0, 'rgba(255,236,130,.9)'); gl.addColorStop(0.3, 'rgba(255,225,100,.35)'); gl.addColorStop(1, 'rgba(255,225,100,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(t.x, t.y, r * 5, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(t.x, t.y, Math.max(2, r * 0.9), 0, 7); ctx.fillStyle = '#fff7c2'; ctx.fill();
+    }
 
     function drawBuilding(bk) {
       var g = G[bk], fl = floorsOf(bk), top = null;
@@ -409,10 +497,11 @@
     }
     function doorOut(bk) {          // the point just outside the main doors
       var g = G[bk], x = doorsX(bk);
-      return g.mode === 'south' ? { x: x, z: g.z0 - 0.9 } : { x: x, z: g.z1 + 0.9 };
+      if (bk === 'mabini') return { x: x, z: 36.4 };
+      return g.mode === 'south' ? { x: x, z: g.z0 - 0.9 } : { x: x, z: QZ };
     }
     function roomXZ(r) {
-      if (r.bk === 'campus') return r.name === 'Main Gate' ? { x: GATE.x, z: GATE.z - 2 } : { x: 18.5, z: 35.2 };
+      if (r.bk === 'campus') return r.name === 'Main Gate' ? { x: GATE.x, z: GATE.z - 2 } : { x: 18.5, z: 39.2 };
       if (!r.row) return { x: (G[r.bk].x0 + G[r.bk].x1) / 2, z: hallZ(r.bk) };
       return cellCenter(r.bk, r.floor, r.row, r.idx);
     }
@@ -458,18 +547,18 @@
       } else aOut = { x: A.x, z: A.z };
       bOut = b.bk !== 'campus' ? doorOut(b.bk) : { x: Bz.x, z: Bz.z };
       // ... across the campus ...
-      var out = [];
-      var west = function (n, o) { return n === 'rizal' ? (o.x < 40 ? { x: 28, via: true } : { x: 55.5, via: false }) : { x: o.x }; };
-      var la, lb;
-      if (na === 'rizal') { la = west('rizal', bOut); out.push([aOut.x, aOut.z]); if (la.via) { out.push([aOut.x, 39.2]); out.push([la.x, 39.2]); out.push([la.x, WALK_Z]); } else { out.push([aOut.x, 39.2]); out.push([la.x, 39.2]); out.push([la.x, WALK_Z]); } }
-      else if (na === 'gate') { out.push([GATE.x, GATE.z - 2]); out.push([GATE.x, WALK_Z]); }
-      else { out.push([aOut.x, aOut.z]); out.push([aOut.x, WALK_Z]); }
-      var lastX = out[out.length - 1][0];
-      if (nb === 'rizal') {
-        var lb2 = west('rizal', aOut);
-        out.push([lb2.x, WALK_Z]); out.push([lb2.x, 39.2]); out.push([bOut.x, 39.2]); out.push([bOut.x, bOut.z]);
-      } else if (nb === 'gate') { out.push([GATE.x, WALK_Z]); out.push([GATE.x, GATE.z - 2]); }
-      else { out.push([bOut.x, WALK_Z]); out.push([bOut.x, bOut.z]); }
+      var out = [], HUB = [30.5, WZ];
+      var westN = { gate: 1, mabini: 1, court: 1 };
+      function hubPath(node, o) {
+        if (node === 'gate') return [[GATE.x, GATE.z - 2], [GATE.x, WZ], HUB];
+        if (node === 'mabini' || node === 'court') return [[o.x, o.z], [o.x, WZ], HUB];
+        if (node === 'mainadmin') return [[o.x, o.z], [o.x, QZ], [HUB[0], QZ], HUB];
+        return [[o.x, o.z], [o.x, RZ], [HUB[0], RZ], HUB];                       // rizal
+      }
+      if (westN[na] && westN[nb]) out = [[aOut.x, aOut.z], [aOut.x, WZ], [bOut.x, WZ], [bOut.x, bOut.z]];
+      else if (na === 'mainadmin' && nb === 'rizal') out = [[aOut.x, aOut.z], [aOut.x, QZ], [55.5, QZ], [55.5, RZ], [bOut.x, RZ], [bOut.x, bOut.z]];   // straight down the pathway between Main and Admin
+      else if (na === 'rizal' && nb === 'mainadmin') out = [[aOut.x, aOut.z], [aOut.x, RZ], [55.5, RZ], [55.5, QZ], [bOut.x, QZ], [bOut.x, bOut.z]];
+      else out = hubPath(na, aOut).concat(hubPath(nb, bOut).reverse());
       out.forEach(function (q) { pts.push({ x: q[0], y: 0.6, z: q[1] }); });
       // ... and into B
       if (b.bk !== 'campus') {
@@ -525,8 +614,16 @@
       ORDER.forEach(function (bk) { var g = G[bk]; items.push({ d: proj((g.x0 + g.x1) / 2, 0, (g.z0 + g.z1) / 2).d, f: function () { drawBuilding(bk); } }); });
       items.push({ d: proj(55.5, 0, 28).d, f: drawStrip });
       items.push({ d: proj(GATE.x, 0, GATE.z).d, f: drawGate });
-      items.push({ d: proj(18.5, 0, 38.5).d, f: drawCourt });
-      items.push({ d: proj(32.5, 0, 43).d, f: drawGazebo });
+      items.push({ d: proj(18.5, 0, 42).d, f: drawCourt });
+      items.push({ d: proj(32.5, 0, 49.5).d, f: drawGazebo });
+      items.push({ d: proj(17.5, 0, 34).d, f: drawMabiniStage });
+      items.push({ d: proj(doorsX('delpilar'), 0, 33).d, f: drawDelPilarSteps });
+      items.push({ d: proj(41, 0, 40).d, f: drawQuadProps });
+      CARS.forEach(function (c) { items.push({ d: proj(c.x, 0, c.z).d, f: function () { drawCar(c); } }); });
+      HEDGES.forEach(function (h) { items.push({ d: proj((h[0] + h[1]) / 2, 0, (h[2] + h[3]) / 2).d, f: function () { drawHedge(h); } }); });
+      TABLES.forEach(function (t) { items.push({ d: proj(t[0], 0, t[1]).d, f: function () { drawTable(t); } }); });
+      SEATS.forEach(function (p) { items.push({ d: proj(p[0], 0, p[1]).d, f: function () { drawStoneSeat(p); } }); });
+      LAMPS.forEach(function (p) { items.push({ d: proj(p[0], 0, p[1]).d - 0.5, f: function () { drawLamp(p); } }); });
       TREES.forEach(function (t) { items.push({ d: proj(t.x, 0, t.z).d, f: function () { drawTree(t); } }); });
       items.sort(function (a, b) { return b.d - a.d; }).forEach(function (it) { it.f(); });
       drawRoute(Date.now() - t0);
@@ -608,7 +705,7 @@
     }
     function setFocus(k) {
       focus = k; floorSel = null; route = null; $('steps').innerHTML = ''; $('info').style.display = 'none'; selRoom = null; chips();
-      if (!k) fly({ tx: 43, tz: 38, dist: 128, yaw: 0.25, pitch: 1.0 });
+      if (!k) fly({ tx: 43, tz: 43, dist: 138, yaw: 0.25, pitch: 1.22 });
       else { var g = G[k]; fly({ tx: (g.x0 + g.x1) / 2, ty: 3, tz: (g.z0 + g.z1) / 2, dist: Math.max(34, (g.x1 - g.x0) * 1.5), yaw: 0.2, pitch: 0.95 }); }
     }
     function fill(sel) {
