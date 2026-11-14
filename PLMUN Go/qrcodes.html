@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Location Codes | PLMUN Go</title>
+  <!-- Admin tool: print these and post them around campus. Not linked in the site menu. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Poppins, Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    header { background: #081e42; color: #fff; padding: 26px 20px; text-align: center; }
+    header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    header p { margin: 0; opacity: .85; font-size: .95rem; }
+    main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+    .tools { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .tools input { flex: 1 1 220px; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: .95rem; }
+    .tools button { padding: 11px 18px; border: 0; border-radius: 10px; background: #081e42; color: #fff; font-weight: 700; cursor: pointer; }
+    .tools button.alt { background: #fde047; color: #081e42; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+    .card { background: #fff; border-radius: 16px; padding: 18px; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,.08); break-inside: avoid; }
+    .card .qr { display: flex; justify-content: center; margin-bottom: 12px; }
+    .card h3 { margin: 0 0 4px; font-size: 1rem; color: #081e42; }
+    .card p { margin: 0; font-size: .8rem; color: #64748b; }
+    .hint { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 16px; margin-bottom: 22px; font-size: .9rem; line-height: 1.6; }
+    @media print {
+      header, .tools, .hint { display: none; }
+      body { background: #fff; }
+      .card { box-shadow: none; border: 1px solid #cbd5e1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PLMUN Go · Location QR Codes</h1>
+    <p>Scan one of these and the website knows where you are standing, so directions start from there.</p>
+  </header>
+
+  <main>
+    <div class="hint">
+      <b>How to use:</b> edit the list in the script below (the <code>place</code> must match a name in your
+      University Office Directory, e.g. "University Library"). Print this page (Ctrl+P), cut the codes, and post
+      each one at its spot (entrance, stairs, hallway). You can also type a place here and press Add.
+    </div>
+
+    <div class="tools">
+      <input id="custom-place" placeholder="Add a place, e.g. Records Management Office">
+      <input id="custom-label" placeholder="Label on the card (optional), e.g. 1st floor lobby">
+      <button id="add-btn">Add</button>
+      <button class="alt" onclick="window.print()">Print</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <script>
+    // Your live site address (the page the QR opens):
+    var SITE = 'https://plmun-go.plmungo081028.workers.dev/index.html';
+
+    // EDIT ME: one line per QR code.  place = a name from the directory, label = text printed on the card.
+    var CHECKPOINTS = [
+      { place: 'Office of the University Registrar', label: 'Mabini Building · 1st floor' },
+      { place: 'Treasury Office',                    label: 'Mabini Building · 1st floor (Treasury)' },
+      { place: 'Office of Student Affairs',          label: 'Mabini Building · 2nd floor' },
+      { place: 'University Business Center',         label: 'Bonifacio Building · 1st floor' },
+      { place: 'Computer Laboratories 1 to 8',       label: 'Bonifacio Building · 2nd floor' },
+      { place: 'CAS Faculty and Dean\'s Office',     label: 'Bonifacio Building · 3rd floor' },
+      { place: 'University Board Room',              label: 'Del Pilar Building · 1st floor' },
+      { place: 'Office of the University President', label: 'Del Pilar Building · 1st floor (President)' },
+      { place: 'University Library',                 label: 'Rizal Building · 1st floor' },
+      { place: 'Heroes Hall',                        label: 'Rizal Building · 3rd floor' },
+      { place: 'University Gymnasium',               label: 'Gymnasium' }
+    ];
+
+    var grid = document.getElementById('grid');
+
+    function addCard(cp) {
+      var url = SITE + '?at=' + encodeURIComponent(cp.place);
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<div class="qr"></div><h3></h3><p></p>';
+      card.querySelector('h3').textContent = cp.label || cp.place;
+      card.querySelector('p').textContent = 'You are at: ' + cp.place;
+      grid.appendChild(card);
+      new QRCode(card.querySelector('.qr'), { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+    }
+
+    CHECKPOINTS.forEach(addCard);
+
+    document.getElementById('add-btn').addEventListener('click', function () {
+      var p = document.getElementById('custom-place').value.trim();
+      var l = document.getElementById('custom-label').value.trim();
+      if (!p) return;
+      addCard({ place: p, label: l });
+      document.getElementById('custom-place').value = '';
+      document.getElementById('custom-label').value = '';
+    });
+  </script>
+</body>
+</html>

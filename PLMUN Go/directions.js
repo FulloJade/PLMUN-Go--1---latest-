@@ -23,13 +23,12 @@
 
   /* ---- 1. EDIT ME: real landmarks that only your team knows ---------------- */
   var LANDMARKS = {
-    // Key = the first word of the building name (Mabini, Bonifacio, Del Pilar, Rizal)
-    // Example:  Bonifacio: 'the main stairwell beside the lobby',
-    Mabini: '',
-    Bonifacio: '',
-    'Del Pilar': '',
-    Rizal: ''
+    Mabini: 'the stairs are at the far left and far right ends of the building',
+    Bonifacio: 'the stairs are in the middle of the back row and at both ends of the front row',
+    'Del Pilar': 'the elevator is at the far left of the back row; the stairs are in the middle of the back row and at the far right of the front row',
+    Rizal: 'go UP using the stairs on the right side; the left stairs are for going down only'
   };
+
 
   /* ---- 2. Words people use for rooms ---------------------------------------- */
   var ALIASES = {
