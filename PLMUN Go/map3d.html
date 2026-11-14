@@ -84,13 +84,14 @@
        x = east, z = south. The main gate is at the bottom-left. Change a number to move or resize a building. */
     var G = {
       mabini:    { x0: 9,  x1: 26, z0: 24, z1: 32.5, floors: 3, color: '#3b7dd8', mode: 'north', label: 'Student Center' },
-      bonifacio: { x0: 33, x1: 54, z0: 24, z1: 32.5, floors: 4, color: '#2f9e63', mode: 'two',   label: 'Main (Bonifacio)' },
-      delpilar:  { x0: 57, x1: 73, z0: 24, z1: 32.5, floors: 5, color: '#d19a2a', mode: 'two',   label: 'Admin (Del Pilar)' },
+      bonifacio: { x0: 33, x1: 54, z0: 20, z1: 28.5, floors: 4, color: '#2f9e63', mode: 'two',   label: 'Main (Bonifacio)' },
+      delpilar:  { x0: 57, x1: 73, z0: 20, z1: 28.5, floors: 5, color: '#d19a2a', mode: 'two',   label: 'Admin (Del Pilar)' },
       rizal:     { x0: 40, x1: 73.5, z0: 47, z1: 55,   floors: 4, color: '#8b5cf6', mode: 'south', label: 'RLRC (Rizal)', flip: true }
     };
     var ORDER = ['mabini', 'bonifacio', 'delpilar', 'rizal'];
     var NAMES = { mabini: 'Student Center', bonifacio: 'Main (Bonifacio)', delpilar: 'Admin (Del Pilar)', rizal: 'RLRC (Rizal)' };
-    var WZ = 37.4, QZ = 34.2, RZ = 46.2, GATE = { x: 7, z: 68 };   // road in the west pocket, walkway in front of Main/Admin, walkway in front of the RLRC
+    var BASEY = { mabini: 0, bonifacio: 0.9, delpilar: 0.9, rizal: 0 };   // Main and Admin stand a little higher than the rest
+    var WZ = 37.4, QZ = 33.7, RZ = 46.2, GATE = { x: 7, z: 68 };   // road in the west pocket, walkway in front of Main/Admin, walkway in front of the RLRC
 
     function rowDepth(g) { return 3; }
     // rectangle of one cell on a floor plan
@@ -111,7 +112,7 @@
     }
 
     /* ===== 2. camera ===== */
-    var cam = { yaw: 0.25, pitch: 1.22, dist: 138, tx: 43, ty: 0, tz: 43 }, goal = null;
+    var cam = { yaw: 0.25, pitch: 1.22, dist: 142, tx: 43, ty: 0, tz: 40 }, goal = null;
     var W = 0, Hh = 0, dpr = 1, FOV = 1, CX = 0, CY = 0;
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -234,9 +235,9 @@
     var TREES = (function () {
       var out = [], id = 1;
       function scatter(x0, x1, z0, z1, n) { for (var i = 0; i < n; i++) { id++; out.push({ x: x0 + rnd(id) * (x1 - x0), z: z0 + rnd(id + 99) * (z1 - z0), h: 3.6 + rnd(id + 7) * 2.6, pine: rnd(id + 3) > 0.7, c: Math.floor(rnd(id + 11) * 4) }); } }
-      scatter(-3, 4.2, 22, 70, 8);         // west edge
-      scatter(2, 86, 14.5, 20, 16);        // behind the buildings
-      scatter(77, 88, 20, 70, 10);         // east side
+      scatter(-3, 4.2, 12, 70, 9);         // west edge
+      scatter(2, 86, 6, 12.5, 16);        // behind the buildings
+      scatter(77, 88, 10, 70, 10);         // east side
       scatter(30, 52, 60, 64, 8);          // Centennial Park
       scatter(56, 76, 66, 71, 6);
       // Serenity Garden: lots of trees around the stone seats
@@ -244,7 +245,7 @@
       // quadrangle corners
       [[30.8, 36.4], [30.8, 44.6], [52.6, 36.4], [52.6, 44.6]].forEach(function (p) { id++; out.push({ x: p[0], z: p[1], h: 4.4, pine: false, c: 1 }); });
       // the BIG shade tree of North Park
-      out.push({ x: 69.8, z: 40.6, h: 12.5, pine: false, c: 0, big: true });
+      out.push({ x: 69.8, z: 42.2, h: 12.5, pine: false, c: 0, big: true });
       return out;
     })();
     var CANOPY = ['#2f8f46', '#3aa655', '#287a3c', '#4db35f'];
@@ -276,14 +277,14 @@
       else flat(Math.min(x0, x1) - h, Math.max(x0, x1) + h, z0 - h, z0 + h, 0.05, '#4b5563');
     }
     // sunken quadrangle
-    var QUAD = { x0: 29.8, x1: 53.4, z0: 35.4, z1: 45.4 };
+    var QUAD = { x0: 29.8, x1: 53.4, z0: 33.4, z1: 45.4 };
     function drawGround() {
-      drawBox(-6, 92, -2.2, 0, 11, 75, '#8b6b4a', 1, { stroke: 'rgba(0,0,0,.25)' });
-      flat(-6, 92, 11, 75, 0, '#9cc98a');
-      for (var i = 0; i < 14; i++) flat(-6, 92, 11 + i * 4.6, 13.3 + i * 4.6, 0.01, '#94c382', 0.55);
+      drawBox(-6, 92, -2.2, 0, 4, 75, '#8b6b4a', 1, { stroke: 'rgba(0,0,0,.25)' });
+      flat(-6, 92, 4, 75, 0, '#9cc98a');
+      for (var i = 0; i < 16; i++) flat(-6, 92, 4 + i * 4.6, 6.3 + i * 4.6, 0.01, '#94c382', 0.55);
       // parks / gardens
       flat(14.2, 26.6, 45, 52, 0.03, '#7fcf6a');                 // Serenity Garden
-      flat(66, 73.6, 35.6, 46, 0.03, '#79cf64');                 // North Park
+      flat(66, 73.6, 38.4, 46.2, 0.03, '#79cf64');               // North Park
       flat(29.5, 53, 59.4, 64.4, 0.03, '#7fcf6a');               // Centennial Park
       flat(62, 72.5, 60, 64.5, 0.04, '#5b8fd6');
       // building shadows
@@ -291,22 +292,21 @@
       // ring road (as on the university map)
       roadSeg(7, 70, 7, WZ, 3);
       roadSeg(7, WZ, 28, WZ, 3);
-      roadSeg(28, 22, 28, 58, 2.8);
-      roadSeg(28, 22, 75, 22, 2.8);
-      roadSeg(75, 22, 75, 58, 2.8);
+      roadSeg(28, 15.5, 28, 58, 2.8);
+      roadSeg(28, 15.5, 75, 15.5, 2.8);
+      roadSeg(75, 15.5, 75, 58, 2.8);
       roadSeg(28, 58, 75, 58, 2.8);
-      [[[7, 70], [7, WZ], [28, WZ]], [[28, 22], [75, 22], [75, 58], [28, 58], [28, 22]]].forEach(function (p) {
+      [[[7, 70], [7, WZ], [28, WZ]], [[28, 15.5], [75, 15.5], [75, 58], [28, 58], [28, 15.5]]].forEach(function (p) {
         ctx.setLineDash([6, 6]); stroke3(p, 'rgba(255,255,255,.75)', 1.2, 0.06); ctx.setLineDash([]);
       });
-      // walkways in front of Main/Admin and in front of the RLRC
-      flat(29.4, 73.6, 32.5, QUAD.z0, 0.06, '#d9d3c3');
+      // walkway in front of the RLRC
       flat(29.4, 73.6, QUAD.z1, 46.9, 0.06, '#d9d3c3');
-      // parking lot in front of Del Pilar (employees' cars)
-      flat(57.4, 73.6, 32.5, 35.4, 0.07, '#6b7280');
-      flat(57.4, 65.4, 35.4, 46, 0.07, '#6b7280');
+      // parking lot in front of Del Pilar (employees' cars): at the SAME low level as the quadrangle
+      flat(57.4, 73.6, 33.4, 38.2, -0.3, '#6b7280');
+      flat(57.4, 65.4, 38.2, 46, -0.3, '#6b7280');
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1;
-      for (var px = 58.2; px < 65.3; px += 1.6) { var a1 = proj(px, 0.08, 36.4), a2 = proj(px, 0.08, 38.4); ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(a2.x, a2.y); ctx.stroke(); var c1 = proj(px, 0.08, 42.6), c2 = proj(px, 0.08, 44.6); ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y); ctx.stroke(); }
-      for (var qx = 58.4; qx < 73.5; qx += 1.7) { if (qx > 66.2 && qx < 71) continue; var b1 = proj(qx, 0.08, 33.0), b2 = proj(qx, 0.08, 34.7); ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }
+      for (var px = 58.2; px < 65.3; px += 1.6) { var c1 = proj(px, -0.28, 38.8), c2 = proj(px, -0.28, 40.8); ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y); ctx.stroke(); var d1 = proj(px, -0.28, 42.8), d2 = proj(px, -0.28, 44.8); ctx.beginPath(); ctx.moveTo(d1.x, d1.y); ctx.lineTo(d2.x, d2.y); ctx.stroke(); }
+      for (var qx = 58.2; qx < 73.5; qx += 1.7) { if (qx > 65.8 && qx < 71.4) continue; var b1 = proj(qx, -0.28, 34.2), b2 = proj(qx, -0.28, 36.2); ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke(); }
       // the QUADRANGLE: big, paved and LOWER than the walkways around it
       var qb = QUAD, cu = '#cbd5e1';
       flat(qb.x0, qb.x1, qb.z0, qb.z1, -0.3, '#e0d2b0');
@@ -314,7 +314,7 @@
       for (var x = qb.x0; x <= qb.x1 + 0.1; x += 2.95) { var p1 = proj(x, -0.28, qb.z0), p2 = proj(x, -0.28, qb.z1); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
       for (var z = qb.z0; z <= qb.z1 + 0.1; z += 2.5) { var q1 = proj(qb.x0, -0.28, z), q2 = proj(qb.x1, -0.28, z); ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.stroke(); }
       // the walkway to the RLRC through the gap between Main and Admin
-      flat(54.4, 56.6, 32.5, 46.9, 0.08, '#f3efe3');
+      flat(54.4, 56.6, 33.2, 46.9, 0.08, '#f3efe3');
       // fountain
       var fc = [41.6, 40.4], ring = [], ring2 = [];
       for (var k = 0; k < 24; k++) { var an = k / 24 * 6.2832; ring.push([fc[0] + Math.cos(an) * 2.7, fc[1] + Math.sin(an) * 2.7]); ring2.push([fc[0] + Math.cos(an) * 2.1, fc[1] + Math.sin(an) * 2.1]); }
@@ -323,8 +323,8 @@
       var qp = proj(47, 0, 40.4); labels.push({ t: 'Quadrangle', x: qp.x, y: qp.y, s: 13, c: '#5b4a22', bg: 'rgba(255,255,255,.75)' });
       var sp = proj(20.4, 0.1, 51.6); labels.push({ t: 'Serenity Garden', x: sp.x, y: sp.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
       var cp2 = proj(41, 0.1, 62.4); labels.push({ t: 'Centennial Park', x: cp2.x, y: cp2.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
-      var np = proj(69.8, 0.1, 45.4); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
-      var pk = proj(61.4, 0.1, 40.6); labels.push({ t: 'Parking', x: pk.x, y: pk.y, s: 10, c: '#fff', bg: 'rgba(55,65,81,.85)' });
+      var np = proj(69.8, 0.1, 46.4); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
+      var pk = proj(61.4, -0.2, 41.8); labels.push({ t: 'Parking', x: pk.x, y: pk.y, s: 10, c: '#fff', bg: 'rgba(55,65,81,.85)' });
     }
     function curbs() {              // the low walls that make the quadrangle look sunken
       var q = QUAD, c = '#b8c2cf';
@@ -360,43 +360,58 @@
       drawBox(35.2, 39.4, 0, 2.6, 47.6, 50.2, '#3f7fd6', 1, { stroke: 'rgba(8,30,66,.5)' });     // the small building next to the Gazebo
       labels.push({ t: 'Gazebo', x: gz.x, y: gz.y - 28, s: 10, c: '#fff', bg: 'rgba(8,30,66,.8)' });
     }
-    function drawStrip() { drawBox(54, 57, 0, 5 * H, 24, 32.5, '#aab2bd', route ? .25 : .95, { windows: !route }); }
+    function drawStrip() { drawBox(53.7, 57.3, 0, 0.9, 19.7, 28.8, '#cfc6b0', route ? 0.35 : 1); drawBox(54, 57, 0.9, 0.9 + 5 * H, 20, 28.5, '#aab2bd', route ? .25 : .95, { windows: !route }); }
 
-    // a raised landing with three levels (two steps up): used for the stage of Mabini and the entrance of Del Pilar
-    function drawSteps(x0, x1, z0, depth, label) {
-      var s1 = drawBox(x0, x1, 0, 0.6, z0, z0 + depth, '#c9b48a', 1, { stroke: 'rgba(60,40,10,.5)' });
-      drawBox(x0, x1, 0, 0.4, z0 + depth, z0 + depth + 0.7, '#d6c6a2', 1, { stroke: 'rgba(60,40,10,.5)' });
-      drawBox(x0, x1, 0, 0.2, z0 + depth + 0.7, z0 + depth + 1.4, '#e4d8bc', 1, { stroke: 'rgba(60,40,10,.5)' });
-      if (label) labels.push({ t: label, x: s1.x, y: s1.y - 4, s: 10, c: '#fff', bg: 'rgba(120,53,15,.85)' });
-    }
-    function drawMabiniStage() {
-      drawSteps(11, 24, 32.5, 2.4, 'Stage');
-      // the Philippine flag in front of Mabini
-      var base = proj(21.8, 0.6, 33.6), top = proj(21.8, 9.6, 33.6), a = proj(24.2, 9.6, 33.6), b = proj(24.2, 7.8, 33.6), c = proj(24.2, 6.0, 33.6), d = proj(21.8, 6.0, 33.6), m = proj(21.8, 7.8, 33.6), tr = proj(22.9, 7.8, 33.6);
+    function flag(x, z, y0) {
+      var base = proj(x, y0, z), top = proj(x, y0 + 9, z), a = proj(x + 2.4, y0 + 9, z), b = proj(x + 2.4, y0 + 7.2, z), c = proj(x + 2.4, y0 + 5.4, z), d = proj(x, y0 + 5.4, z), m = proj(x, y0 + 7.2, z), tr = proj(x + 1.1, y0 + 7.2, z);
       ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(top.x, top.y); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 2; ctx.stroke();
       ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(m.x, m.y); ctx.closePath(); ctx.fillStyle = '#0038a8'; ctx.fill();
       ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fillStyle = '#ce1126'; ctx.fill();
       ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
     }
-    function drawDelPilarSteps() { var dx = doorsX('delpilar'); drawSteps(dx - 2.6, dx + 2.6, 32.5, 1.2, null); }
+    // In front of Main + Admin (back to front):  entrance -> 3 small steps -> covered hallway -> steps down -> quadrangle
+    function drawTerrace() {
+      var T = 0.45, ZF = 32.2, d1 = doorsX('bonifacio'), d2 = doorsX('delpilar'), line = 'rgba(60,50,30,.45)';
+      drawBox(33, 73, 0, T, 28.5, ZF, '#ddd5c2', 1, { stroke: line });                         // the hallway (a little lower than the buildings)
+      [d1, d2].forEach(function (dx) {
+        drawBox(dx - 2.2, dx + 2.2, 0, 0.9, 28.5, 29.3, '#e8e0cc', 1, { stroke: line });       // 3 small steps up to the entrance
+        drawBox(dx - 2.2, dx + 2.2, 0, 0.75, 29.3, 29.7, '#e8e0cc', 1, { stroke: line });
+        drawBox(dx - 2.2, dx + 2.2, 0, 0.6, 29.7, 30.1, '#e8e0cc', 1, { stroke: line });
+        drawBox(dx - 3.6, dx + 3.6, -0.3, 0.2, ZF, ZF + 0.5, '#e4dcc8', 1, { stroke: line });  // steps down to the quadrangle
+        drawBox(dx - 3.6, dx + 3.6, -0.3, -0.05, ZF + 0.5, ZF + 1.0, '#ece5d3', 1, { stroke: line });
+      });
+      // low ledge along the front of the hallway (open where the stairs are)
+      [[33, d1 - 3.6], [d1 + 3.6, d2 - 3.6], [d2 + 3.6, 73]].forEach(function (r) { if (r[1] > r[0]) drawBox(r[0], r[1], T, T + 0.4, ZF - 0.3, ZF, '#c9c1ad', 1, { stroke: line }); });
+      // waiting shed in front of Bonifacio, beside the entrance
+      var sx0 = d1 - 9.2, sx1 = d1 - 4.6, sz0 = 29.9, sz1 = 31.7;
+      [[sx0, sz0], [sx1 - 0.3, sz0], [sx0, sz1 - 0.3], [sx1 - 0.3, sz1 - 0.3]].forEach(function (p) { drawBox(p[0], p[0] + 0.3, T, T + 2.9, p[1], p[1] + 0.3, '#6b7280', 1); });
+      drawBox(sx0 + 0.4, sx1 - 0.4, T + 0.0, T + 0.5, sz1 - 0.55, sz1 - 0.25, '#8b5a2b', 1);                      // bench
+      var roof = drawBox(sx0 - 0.4, sx1 + 0.4, T + 2.9, T + 3.3, sz0 - 0.5, sz1 + 0.4, '#2563eb', 1, { stroke: 'rgba(8,30,66,.55)' });
+      labels.push({ t: 'Waiting shed', x: roof.x, y: roof.y - 10, s: 10, c: '#fff', bg: 'rgba(8,30,66,.85)' });
+      // the stage + the Philippine flag, in front of Bonifacio
+      var st = drawBox(d1 + 4.4, 53.4, T, T + 0.3, 29.2, ZF - 0.4, '#b8905a', 1, { stroke: 'rgba(60,40,10,.55)' });
+      flag(d1 + 6.2, 30.2, T + 0.3);
+      labels.push({ t: 'Stage', x: st.x, y: st.y + 6, s: 10, c: '#fff', bg: 'rgba(120,53,15,.9)' });
+    }
 
     // cars in the parking lot
     var CARS = (function () {
       var cols = ['#ef4444', '#f8fafc', '#1e293b', '#3b82f6', '#facc15', '#9ca3af', '#10b981', '#f97316'], out = [], i = 0;
-      for (var x = 58.9; x < 65.2; x += 1.6) { if (rnd(x * 3) > 0.35) out.push({ x: x, z: 37.5, c: cols[(i++) % cols.length], v: true }); if (rnd(x * 5) > 0.4) out.push({ x: x, z: 43.6, c: cols[(i++) % cols.length], v: true }); }
-      for (var y = 58.9; y < 73.4; y += 1.7) { if (y > 66.2 && y < 71) continue; if (rnd(y * 7) > 0.3) out.push({ x: y, z: 33.9, c: cols[(i++) % cols.length], v: true }); }
+      for (var x = 58.9; x < 65.2; x += 1.6) { if (rnd(x * 3) > 0.35) out.push({ x: x, z: 39.8, c: cols[(i++) % cols.length] }); if (rnd(x * 5) > 0.4) out.push({ x: x, z: 43.8, c: cols[(i++) % cols.length] }); }
+      for (var y = 58.9; y < 73.4; y += 1.7) { if (y > 65.6 && y < 71.6) continue; if (rnd(y * 7) > 0.3) out.push({ x: y, z: 35.2, c: cols[(i++) % cols.length] }); }
       return out;
     })();
     function drawCar(c) {
-      drawBox(c.x - 0.55, c.x + 0.55, 0.15, 0.7, c.z - 1.0, c.z + 1.0, c.c, 1, { stroke: 'rgba(0,0,0,.45)' });
-      drawBox(c.x - 0.45, c.x + 0.45, 0.7, 1.15, c.z - 0.55, c.z + 0.55, '#bcd6ee', 1, { stroke: 'rgba(0,0,0,.4)' });
+      var L0 = -0.3;       // the lot is as low as the quadrangle
+      drawBox(c.x - 0.55, c.x + 0.55, L0 + 0.15, L0 + 0.7, c.z - 1.0, c.z + 1.0, c.c, 1, { stroke: 'rgba(0,0,0,.45)' });
+      drawBox(c.x - 0.45, c.x + 0.45, L0 + 0.7, L0 + 1.15, c.z - 0.55, c.z + 0.55, '#bcd6ee', 1, { stroke: 'rgba(0,0,0,.4)' });
     }
     // hedges along the pathway to the RLRC
     var HEDGES = (function () { var o = []; [[35.2, 37.8], [38.2, 40.8], [41.2, 43.8], [44.2, 46.2]].forEach(function (r) { o.push([53.8, 54.5, r[0], r[1]]); o.push([56.5, 57.2, r[0], r[1]]); }); return o; })();
     function drawHedge(h) { drawBox(h[0], h[1], 0, 1.05, h[2], h[3], '#2f8a3e', 1, { stroke: 'rgba(10,50,20,.55)' }); }
 
     // North Park: lunch tables and seats in the shade of the big tree
-    var TABLES = [[66.8, 38.2], [72.6, 38.2], [66.8, 43.2], [72.6, 43.2], [69.8, 36.6], [69.8, 44.4]];
+    var TABLES = [[67.2, 40.2], [72.4, 40.2], [67.2, 44.4], [72.4, 44.4], [69.8, 38.9]];
     function drawTable(t) {
       drawBox(t[0] - 0.9, t[0] + 0.9, 0.7, 0.85, t[1] - 0.45, t[1] + 0.45, '#a16207', 1, { stroke: 'rgba(0,0,0,.4)' });
       drawBox(t[0] - 0.8, t[0] - 0.7, 0, 0.7, t[1] - 0.3, t[1] + 0.3, '#6b4a2b', 1);
@@ -407,7 +422,7 @@
     // Serenity Garden: ring of stone seats + lamps
     var SEATS = (function () { var o = []; for (var k = 0; k < 16; k++) { if (k === 4) continue; var an = k / 16 * 6.2832; o.push([20.4 + Math.cos(an) * 3.6, 48.4 + Math.sin(an) * 3.1]); } return o; })();
     function drawStoneSeat(p) { drawBox(p[0] - 0.55, p[0] + 0.55, 0, 0.5, p[1] - 0.3, p[1] + 0.3, '#a8a29e', 1, { stroke: 'rgba(0,0,0,.35)' }); }
-    var LAMPS = [[14.8, 45.6], [26, 45.6], [14.8, 51.4], [26, 51.4], [20.4, 45.2], [20.4, 52], [16.2, 48.4], [24.6, 48.4], [18, 44.6], [23, 44.6], [38.5, 36.2], [45, 44.6], [60.8, 46.4]];
+    var LAMPS = [[14.8, 45.6], [26, 45.6], [14.8, 51.4], [26, 51.4], [20.4, 45.2], [20.4, 52], [16.2, 48.4], [24.6, 48.4], [18, 44.6], [23, 44.6], [38.5, 35.4], [45, 44.6], [60.8, 46.4], [34, 31.6], [72.2, 31.6]];
     function drawLamp(p) {
       var b = proj(p[0], 0, p[1]), t = proj(p[0], 3.4, p[1]), r = FOV * 0.5 / b.d;
       ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.strokeStyle = '#374151'; ctx.lineWidth = 2; ctx.stroke();
@@ -419,9 +434,10 @@
 
     function drawBuilding(bk) {
       var g = G[bk], fl = floorsOf(bk), top = null;
+      if (BASEY[bk]) drawBox(g.x0 - 0.3, g.x1 + 0.3, 0, BASEY[bk], g.z0 - 0.3, g.z1 + 0.3, '#cfc6b0', route ? 0.35 : 1, { stroke: 'rgba(60,50,30,.4)' });
       fl.forEach(function (f) {
         var m = floorMode(bk, f); if (m === 'hidden') return;
-        var y0 = (f - 1) * H, y1 = y0 + H - 0.2;
+        var y0 = (f - 1) * H + BASEY[bk], y1 = y0 + H - 0.2;
         var alpha = { solid: 0.93, dim: 0.16, ghost: 0.2, below: 0.3, rooms: 1 }[m];
         if (m === 'rooms') {
           drawBox(g.x0, g.x1, y0, y0 + 0.3, g.z0, g.z1, '#e8e4d8', 1, { stroke: 'rgba(8,30,66,.5)' });
@@ -465,7 +481,7 @@
     function BY(bk, f, n) { return L.BY_KEY[bk + '|' + f + '|' + n] || null; }
 
     /* ===== 6. the route in 3D ===== */
-    function P(x, z, f) { return { x: x, y: (f - 1) * H + 1.0, z: z }; }
+    function P(x, z, f) { var hi = x > 33 && x < 73.6 && z > 19.5 && z < 28.7; return { x: x, y: (f - 1) * H + 1.0 + (hi ? 0.9 : 0), z: z }; }
     function cellCenter(bk, f, row, idx) {
       var arr = BLD[bk].floors[f][row], r = cellRect(bk, row, idx, arr.length);
       return { x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 };
@@ -616,8 +632,7 @@
       items.push({ d: proj(GATE.x, 0, GATE.z).d, f: drawGate });
       items.push({ d: proj(18.5, 0, 42).d, f: drawCourt });
       items.push({ d: proj(32.5, 0, 49.5).d, f: drawGazebo });
-      items.push({ d: proj(17.5, 0, 34).d, f: drawMabiniStage });
-      items.push({ d: proj(doorsX('delpilar'), 0, 33).d, f: drawDelPilarSteps });
+      items.push({ d: proj(53, 0, 30.5).d - 6, f: drawTerrace });
       items.push({ d: proj(41, 0, 40).d, f: drawQuadProps });
       CARS.forEach(function (c) { items.push({ d: proj(c.x, 0, c.z).d, f: function () { drawCar(c); } }); });
       HEDGES.forEach(function (h) { items.push({ d: proj((h[0] + h[1]) / 2, 0, (h[2] + h[3]) / 2).d, f: function () { drawHedge(h); } }); });
@@ -705,7 +720,7 @@
     }
     function setFocus(k) {
       focus = k; floorSel = null; route = null; $('steps').innerHTML = ''; $('info').style.display = 'none'; selRoom = null; chips();
-      if (!k) fly({ tx: 43, tz: 43, dist: 138, yaw: 0.25, pitch: 1.22 });
+      if (!k) fly({ tx: 43, tz: 40, dist: 142, yaw: 0.25, pitch: 1.22 });
       else { var g = G[k]; fly({ tx: (g.x0 + g.x1) / 2, ty: 3, tz: (g.z0 + g.z1) / 2, dist: Math.max(34, (g.x1 - g.x0) * 1.5), yaw: 0.2, pitch: 0.95 }); }
     }
     function fill(sel) {
