@@ -64,6 +64,12 @@
     .dests button:hover { background: rgba(253,224,71,.3); }
     select { width: 100%; padding: 10px; border-radius: 10px; border: 0; font-size: .95rem; margin-bottom: 10px; }
     .note { font-size: .78rem; opacity: .75; margin-top: 8px; }
+    .search { width: 100%; padding: 11px 12px; border-radius: 10px; border: 0; font-size: .95rem; margin-bottom: 8px; }
+    .results { display: flex; flex-direction: column; gap: 6px; max-height: 24vh; overflow-y: auto; }
+    .results button { text-align: left; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; border-radius: 12px; padding: 9px 12px; font-size: .88rem; cursor: pointer; }
+    .results button small { display: block; opacity: .65; font-size: .72rem; }
+    .results button:hover { background: rgba(253,224,71,.25); }
+    .badge { display: inline-block; background: #fde047; color: #081e42; border-radius: 12px; padding: 2px 9px; font-size: .72rem; font-weight: 700; margin-left: 6px; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -101,41 +107,24 @@
     <div class="card" id="card"></div>
   </div>
 
+
+  <!-- The campus layout + route engine (shared with the Directions panel on the home page) -->
+  <script src="routes.js"></script>
+
   <script>
   /* =========================================================================
-     EDIT ME: what to show at each QR code.
-       - the key ("Office of the University Registrar") must match the
-         ?at=... name used by the QR code (see qr-codes.html)
-       - dir is the way to go AS SEEN WHEN FACING THE QR CODE:
-           "up" (straight ahead), "left", "right", "down" (turn around),
-           "arrive" (you are there)
-       - photo is optional (images/....png)
-       - a destination can have many steps; the person taps "Next step",
-         or just scans the next QR code on the way.
-     The examples below are SAMPLES, replace them with your real campus.
+     OPTIONAL: hand-written routes that OVERRIDE the automatic ones.
+     Use the room name for "from" and "to". dir = "up" (straight), "left",
+     "right", "down" (turn around). photo is optional.
+     Leave it empty ({}) to use only automatic routes. The layout itself
+     (rooms, stairs, outside walking) lives in routes.js.
      ========================================================================= */
   var AR_ROUTES = {
-    'Office of the University Registrar': {
-      'Treasury Office': [
-        { dir: 'up',    text: 'Walk straight along the corridor.' },
-        { dir: 'right', text: 'The Treasury Office is the next door on your right.', photo: '' }
-      ],
-      'Office of Student Affairs': [
-        { dir: 'right', text: 'Take the stairs at the right end of the building.' },
-        { dir: 'up',    text: 'Go up to the 2nd floor, then walk straight to the Office of Student Affairs.' }
-      ]
-    },
-    'Treasury Office': {
-      'Office of the University Registrar': [
-        { dir: 'left', text: 'Walk back along the corridor. The Registrar is a few doors to your left.' }
-      ]
-    },
-    'University Library': {
-      'University Gymnasium': [
-        { dir: 'down', text: 'Exit the building and head back to the quadrangle.' },
-        { dir: 'up',   text: 'Walk across the quadrangle to the University Gymnasium.' }
-      ]
-    }
+    // 'Room 221': {
+    //   'Office of the University Registrar': [
+    //     { dir: 'left', text: 'Walk back along the corridor.', photo: 'images/your-photo.png' }
+    //   ]
+    // }
   };
 
   var SITE_HOME = 'index.html';
@@ -147,107 +136,115 @@
     var $ = function (id) { return document.getElementById(id); };
     var video = $('cam'), hud = $('hud'), card = $('card'), reticle = $('reticle');
     var arrowStage = $('arrow-stage'), arrow = $('arrow');
-    var here = null, dest = null, stepIdx = 0, stream = null, scanTimer = null, voiceOn = true;
-    var detector = null;
+    var here = null, dest = null, steps = [], stepIdx = 0, stream = null, scanTimer = null, voiceOn = true, detector = null;
 
-    function places() {
-      var s = {};
-      Object.keys(AR_ROUTES).forEach(function (a) { s[a] = 1; Object.keys(AR_ROUTES[a]).forEach(function (b) { s[b] = 1; }); });
-      return Object.keys(s).sort();
+    var L = window.PLMunLayout, ROOMS = L.ROOMS, BY_KEY = L.BY_KEY, ORD = L.ORD;
+    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function findRoom(name, bk, floor) { return L.find(name, bk, floor); }
+    function routeFor(a, b) {
+      var custom = AR_ROUTES[a.name] && AR_ROUTES[a.name][b.name];
+      return custom || L.route(a, b);
     }
-    function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+    /* ---------------- speech + arrow ---------------- */
     function speak(t) {
       if (!voiceOn || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));
     }
+    function setArrow(dir) { arrow.className = dir || 'up'; arrowStage.classList.add('on'); }
 
-    function setArrow(dir) {
-      arrow.className = dir || 'up';
-      arrowStage.classList.add('on');
+    /* ---------------- a searchable list of rooms ---------------- */
+    function picker(title, hint, onPick, extraHtml) {
+      card.innerHTML = '<h3>' + esc(title) + '</h3><p>' + hint + '</p>' + (extraHtml || '') +
+        '<input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
+      var q = $('q'), res = $('res');
+      function show() {
+        var t = q.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+        var list = ROOMS.filter(function (r) {
+          var h = (r.name + ' ' + r.where).toLowerCase();
+          return t.every(function (w) { return h.indexOf(w) !== -1; });
+        }).slice(0, 12);
+        res.innerHTML = list.length ? '' : '<p class="note">No match. Try another word.</p>';
+        list.forEach(function (r) {
+          var b = document.createElement('button');
+          b.innerHTML = esc(r.name) + '<small>' + esc(r.where) + '</small>';
+          b.addEventListener('click', function () { onPick(r); });
+          res.appendChild(b);
+        });
+      }
+      q.addEventListener('input', show);
+      show();
     }
 
-    /* ---------- UI states ---------- */
+    /* ---------------- screens ---------------- */
     function render() {
-      $('here-name').textContent = here || 'Not set: scan a QR code';
+      $('here-name').textContent = here ? here.name : 'Not set: scan a QR code';
+      var scanning = !!detector;
 
-      // 1. no location yet
       if (!here) {
         arrowStage.classList.remove('on');
-        reticle.classList.toggle('on', !!detector);
-        var opts = '<option value="">Choose where you are…</option>' + places().map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('');
-        card.innerHTML = '<h3>Where are you?</h3><p>' + (detector ? 'Point the camera at a PLMUN Go QR code, or choose your spot:' : 'This browser cannot scan QR codes. Choose your spot:') +
-          '</p><select id="pick-here">' + opts + '</select>';
-        $('pick-here').addEventListener('change', function (e) { if (e.target.value) setHere(e.target.value); });
+        reticle.classList.toggle('on', scanning);
+        picker('Where are you?', scanning ? 'Point the camera at a PLMUN Go QR code, or search your spot:' : 'Search the room you are closest to:', setHere);
         return;
       }
+      reticle.classList.toggle('on', scanning && !dest);
 
-      reticle.classList.toggle('on', !!detector && !dest);
-
-      // 2. location set, no destination
       if (!dest) {
         arrowStage.classList.remove('on');
-        var list = AR_ROUTES[here] ? Object.keys(AR_ROUTES[here]) : [];
-        card.innerHTML = '<h3>Where do you want to go?</h3>' +
-          (list.length ? '<div class="dests">' + list.map(function (d) { return '<button data-d="' + esc(d) + '">' + esc(d) + '</button>'; }).join('') + '</div>'
-                       : '<p>No routes are set up from here yet. Scan another QR code.</p>') +
-          '<p class="note">Tip: scan the next QR code on your way and the guide continues by itself.</p>';
-        card.querySelectorAll('[data-d]').forEach(function (b) { b.addEventListener('click', function () { setDest(b.getAttribute('data-d')); }); });
+        picker('Where do you want to go?', 'From <b>' + esc(here.name) + '</b> (' + esc(here.where) + ')', setDest,
+          '<p class="note" style="margin-top:-4px">Tip: scan the next QR code on your way and the guide continues by itself.</p>');
         return;
       }
 
-      // 3. arrived
-      if (here === dest) {
+      if (here.key === dest.key) {
         setArrow('arrive');
-        card.innerHTML = '<h3>You have arrived! 🎉</h3><p>' + esc(dest) + '</p><div class="row"><button class="btn" id="again">Find another place</button></div>';
-        $('again').addEventListener('click', function () { dest = null; stepIdx = 0; render(); });
-        speak('You have arrived at ' + dest);
+        card.innerHTML = '<h3>You have arrived! 🎉</h3><p>' + esc(dest.name) + '<br><small>' + esc(dest.where) + '</small></p><div class="row"><button class="btn" id="again">Find another place</button></div>';
+        $('again').addEventListener('click', function () { dest = null; steps = []; render(); });
+        speak('You have arrived at ' + dest.name);
         return;
       }
 
-      // 4. a route is active
-      var steps = (AR_ROUTES[here] && AR_ROUTES[here][dest]) || null;
-      if (!steps) {
-        arrowStage.classList.remove('on');
-        card.innerHTML = '<h3>No route from here</h3><p>There is no AR route from <b>' + esc(here) + '</b> to <b>' + esc(dest) + '</b> yet. Scan a QR code closer to the start, or choose another place.</p>' +
-          '<div class="row"><button class="btn" id="change-dest">Choose another place</button></div>';
-        $('change-dest').addEventListener('click', function () { dest = null; render(); });
-        return;
-      }
       var st = steps[Math.min(stepIdx, steps.length - 1)];
       setArrow(st.dir);
       var last = stepIdx >= steps.length - 1;
+      var photo = st.photo || (last ? 'images/rooms/' + dest.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.jpg' : '');
       card.innerHTML =
-        '<h3>To ' + esc(dest) + ' · step ' + (Math.min(stepIdx, steps.length - 1) + 1) + ' of ' + steps.length + '</h3>' +
-        (st.photo ? '<img src="' + esc(st.photo) + '" alt="" onerror="this.remove()">' : '') +
+        '<h3>To ' + esc(dest.name) + '<span class="badge">step ' + (Math.min(stepIdx, steps.length - 1) + 1) + '/' + steps.length + '</span></h3>' +
+        (photo ? '<img src="' + esc(photo) + '" alt="" onerror="this.remove()">' : '') +
         '<p>' + esc(st.text) + '</p>' +
         '<div class="row">' +
           (last ? '<button class="btn" id="arrived">I have arrived</button>' : '<button class="btn" id="next">Next step</button>') +
+          (stepIdx > 0 ? '<button class="btn ghost" id="prev">Back</button>' : '') +
           '<button class="btn ghost" id="say">🔊 Read</button><button class="btn ghost" id="cancel">Cancel</button></div>';
       var nx = $('next'); if (nx) nx.addEventListener('click', function () { stepIdx++; render(); });
-      var ar = $('arrived'); if (ar) ar.addEventListener('click', function () { here = dest; stepIdx = 0; render(); });
+      var pv = $('prev'); if (pv) pv.addEventListener('click', function () { stepIdx--; render(); });
+      var ar = $('arrived'); if (ar) ar.addEventListener('click', function () { here = dest; steps = []; stepIdx = 0; render(); });
       $('say').addEventListener('click', function () { speak(st.text); });
-      $('cancel').addEventListener('click', function () { dest = null; stepIdx = 0; render(); });
+      $('cancel').addEventListener('click', function () { dest = null; steps = []; stepIdx = 0; render(); });
       speak(st.text);
     }
 
-    function setHere(name) {
-      // match loosely against known places
-      var all = places(), n = name.toLowerCase();
-      var hit = all.filter(function (p) { return p.toLowerCase() === n; })[0] ||
-                all.filter(function (p) { return p.toLowerCase().indexOf(n) !== -1 || n.indexOf(p.toLowerCase()) !== -1; })[0] || name;
-      here = hit; stepIdx = 0;
-      try { localStorage.setItem('plmun-here', hit); } catch (e) { }   // same spot as the main website
+    function setHere(r) {
+      here = r;
+      try { localStorage.setItem('plmun-here', r.name); localStorage.setItem('plmun-here-key', r.key); } catch (e) { }
       if (navigator.vibrate) navigator.vibrate(60);
+      if (dest) {                       // already navigating: recalculate from the new spot
+        if (here.key === dest.key) { steps = []; }
+        else { steps = routeFor(here, dest); }
+        stepIdx = 0;
+      }
       render();
     }
-    function setDest(d) { dest = d; stepIdx = 0; render(); }
+    function setDest(r) { dest = r; steps = routeFor(here, r); stepIdx = 0; render(); }
 
-    /* ---------- QR scanning (Chrome / Edge / Android) ---------- */
-    function parseQr(text) {
-      try { var u = new URL(text); var at = u.searchParams.get('at'); if (at) return at; } catch (e) { }
-      return text && text.length < 80 ? text : null;
+    /* ---------------- QR scanning (Chrome / Edge / Android) ---------------- */
+    function roomFromQr(text) {
+      try {
+        var u = new URL(text), at = u.searchParams.get('at');
+        if (at) return findRoom(at, u.searchParams.get('b'), u.searchParams.get('f'));
+      } catch (e) { }
+      return text && text.length < 90 ? findRoom(text) : null;
     }
     function startScan() {
       if (!('BarcodeDetector' in window)) return;
@@ -258,19 +255,20 @@
         busy = true;
         detector.detect(video).then(function (codes) {
           if (codes.length) {
-            var at = parseQr(codes[0].rawValue);
-            if (at && at !== lastSeen) { lastSeen = at; setHere(at); }
+            var raw = codes[0].rawValue;
+            if (raw !== lastSeen) { lastSeen = raw; var r = roomFromQr(raw); if (r) setHere(r); }
           } else { lastSeen = ''; }
         }).catch(function () { }).then(function () { busy = false; });
       }, 450);
     }
 
-    /* ---------- start / stop ---------- */
+    /* ---------------- start / stop ---------------- */
     function open(withCamera) {
       $('start').style.display = 'none';
       hud.classList.add('on');
-      try { var saved = localStorage.getItem('plmun-here'); if (saved && !here) here = saved; } catch (e) { }
-      var q = new URLSearchParams(location.search).get('at'); if (q) here = q;
+      var p = new URLSearchParams(location.search);
+      if (p.get('at')) here = findRoom(p.get('at'), p.get('b'), p.get('f'));
+      if (!here) { try { var k = localStorage.getItem('plmun-here-key'); if (k) here = BY_KEY[k] || null; } catch (e) { } }
       if (!withCamera) { video.style.display = 'none'; document.body.style.background = 'linear-gradient(160deg,#081e42,#0b3b8c)'; }
       if (withCamera) startScan();
       render();
@@ -280,21 +278,21 @@
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('Camera is not available in this browser. Use the no-camera mode.'); return; }
       navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }).then(function (s) {
         stream = s; video.srcObject = s; open(true);
-      }).catch(function () {
-        alert('Could not open the camera. Allow camera access in your browser, or use the no-camera mode.');
-      });
+      }).catch(function () { alert('Could not open the camera. Allow camera access in your browser, or use the no-camera mode.'); });
     });
     $('nocam-btn').addEventListener('click', function () { open(false); });
     $('close').addEventListener('click', function () {
       if (scanTimer) clearInterval(scanTimer);
       if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
-      window.speechSynthesis && window.speechSynthesis.cancel();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       window.location.href = SITE_HOME;
     });
     $('mute').addEventListener('click', function () {
       voiceOn = !voiceOn; this.textContent = voiceOn ? '🔊' : '🔇';
       if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
     });
+
+    window.PLMunAR = { ROOMS: ROOMS, route: function (a, b) { return routeFor(findRoom(a), findRoom(b)); } };   // handy for testing
   })();
   </script>
 </body>

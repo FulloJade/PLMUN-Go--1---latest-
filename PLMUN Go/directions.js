@@ -13,10 +13,10 @@
    - Highlights the start and end buildings on the campus map.
    - Adds a small route button to every room in the directory.
 
-   IMPORTANT: the directory does not say where the stairs are or how the
-   buildings connect, so the steps are built from FLOORS and BUILDINGS only.
-   To make them more precise, fill in LANDMARKS below (one sentence per
-   building, e.g. "the stairs beside the clinic").
+   ROUTES: the real steps (which stairs, which door, which way to turn, the walk
+   outside) come from routes.js, which holds the complete PLMUN floor plans and
+   campus map. Load routes.js BEFORE this file. If a place is not in routes.js
+   the old floor-and-building steps are used instead (LANDMARKS below).
    ========================================================================== */
 (function () {
   'use strict';
@@ -25,9 +25,12 @@
   var LANDMARKS = {
     Mabini: 'the stairs are at the far left and far right ends of the building',
     Bonifacio: 'the stairs are in the middle of the back row and at both ends of the front row',
-    'Del Pilar': 'the elevator is at the far left of the back row; the stairs are in the middle of the back row and at the far right of the front row',
+    'Del Pilar': 'the elevator is at the far left of the back row; the stairs are in the middle of the back row and at both ends of the front row',
     Rizal: 'go UP using the stairs on the right side; the left stairs are for going down only'
   };
+
+  // directory building name -> key used in routes.js
+  var LAYOUT_KEY = { Mabini: 'mabini', Bonifacio: 'bonifacio', 'Del Pilar': 'delpilar', Rizal: 'rizal' };
 
 
   /* ---- 2. Words people use for rooms ---------------------------------------- */
@@ -39,32 +42,38 @@
     toilet: 'comfort room',
     bathroom: 'comfort room',
     washroom: 'comfort room',
-    clinic: 'medical dental clinic',
-    nurse: 'medical dental clinic',
-    dentist: 'medical dental clinic',
-    admission: 'university admission center',
-    admissions: 'university admission center',
+    clinic: 'university clinic',
+    nurse: 'university clinic',
+    dentist: 'university clinic',
     registrar: 'university registrar',
     cashier: 'treasury office',
     treasury: 'treasury office',
     guidance: 'guidance counseling',
     osa: 'office of student affairs',
-    usc: 'university student council',
     ict: 'information communication technology',
-    library: 'university library',
     president: 'university president',
-    hr: 'human resource',
-    gym: 'university gymnasium',
-    gymnasium: 'university gymnasium',
-    'comp lab': 'computer laboratories',
-    'computer lab': 'computer laboratories',
+    hr: 'hrdmo',
+    gym: 'covered court gym',
+    gymnasium: 'covered court gym',
+    'covered court': 'covered court gym',
+    gate: 'main gate',
+    'comp lab': 'computer laboratory',
+    'computer lab': 'computer laboratory',
     cba: 'cba faculty',
     cas: 'cas faculty',
     cte: 'cte faculty',
     citcs: 'citcs faculty',
     ccj: 'ccj faculty',
-    rotc: 'reserve officers training corps',
-    lounge: 'students lounge'
+    coa: 'coa faculty',
+    rotc: 'rotc',
+    sia: 'soroptimist',
+    gso: 'general services',
+    reqalia: 'reqalia',
+    cipaa: 'cipaa',
+    warden: 'warden publication',
+    chorale: 'chorale',
+    cafeteria: 'cafeteria',
+    canteen: 'cafeteria'
   };
 
   var STOP = { the: 1, a: 1, an: 1, of: 1, and: 1, to: 1, in: 1, at: 1, on: 1, my: 1, our: 1, room: 1,
@@ -113,8 +122,10 @@
         d.querySelectorAll('li').forEach(function (li) {
           var name = ownText(li);
           if (!name) return;
+          var lay = (window.PLMunLayout && LAYOUT_KEY[key]) ? window.PLMunLayout.BY_KEY[LAYOUT_KEY[key] + '|' + floor + '|' + name] : null;
           rooms.push({
             id: rooms.length,
+            lay: lay || null,
             name: name,
             building: key,
             buildingName: buildings[key].name,
@@ -128,16 +139,23 @@
     });
 
     // Places the directory does not list as offices but the assistant already knows
+    var PL = window.PLMunLayout;
     rooms.push({
-      id: rooms.length, name: 'Comfort Room / Restroom', building: 'Bonifacio',
+      id: rooms.length, lay: PL ? PL.BY_KEY['bonifacio|1|Student CR'] : null, name: 'Comfort Room / Restroom', building: 'Bonifacio',
       buildingName: 'Bonifacio Building', floor: 1, floorLabel: 'First Floor',
       norm: normalize('comfort room restroom toilet bathroom Bonifacio')
     });
-    buildings['Gymnasium'] = { key: 'Gymnasium', name: 'University Gymnasium', outdoor: true };
+    buildings['Gymnasium'] = { key: 'Gymnasium', name: 'Covered Court / Gym', outdoor: true };
     rooms.push({
-      id: rooms.length, name: 'University Gymnasium', building: 'Gymnasium',
-      buildingName: 'University Gymnasium', floor: 1, floorLabel: 'Ground level',
-      norm: normalize('university gymnasium gym')
+      id: rooms.length, lay: PL ? PL.BY_KEY['campus|1|Covered Court / Gym'] : null, name: 'Covered Court / Gym', building: 'Gymnasium',
+      buildingName: 'Covered Court / Gym', floor: 1, floorLabel: 'Ground level',
+      norm: normalize('covered court gym gymnasium university gymnasium')
+    });
+    buildings['Gate'] = { key: 'Gate', name: 'Main Gate', outdoor: true };
+    rooms.push({
+      id: rooms.length, lay: PL ? PL.BY_KEY['campus|1|Main Gate'] : null, name: 'Main Gate', building: 'Gate',
+      buildingName: 'Main Gate', floor: 1, floorLabel: 'Ground level',
+      norm: normalize('main gate entrance gate')
     });
   }
 
@@ -251,6 +269,12 @@
     return 'Take the stairs' + landmark(key) + ' ' + dir + ' ' + plural(diff, 'floor') + ' to the ' + floorWord(to) + '.';
   }
 
+  function iconFor(s) {
+    if (/^(Go UP|Go DOWN)/.test(s.text)) return 'fa-stairs';
+    if (/^(Enter|Leave|Walk to the main doors|You are on the ground floor)/.test(s.text)) return 'fa-door-open';
+    return { left: 'fa-arrow-left', right: 'fa-arrow-right', up: 'fa-person-walking', down: 'fa-arrow-down', arrive: 'fa-flag-checkered' }[s.dir] || 'fa-person-walking';
+  }
+
   function buildRoute(a, b) {
     var steps = [];
     var summary;
@@ -259,7 +283,18 @@
       return { summary: 'You are already there.', steps: [{ i: 'fa-circle-check', t: 'You picked the same place for both. Choose a different destination.' }] };
     }
 
-    steps.push({ i: 'fa-location-dot', t: 'Start at <b>' + esc(a.name) + '</b> (' + esc(a.buildingName) + ', ' + floorWord(a.floor) + ').' });
+    steps.push({ i: 'fa-location-dot', t: 'Start at <b>' + esc(a.name) + '</b>' + (buildings[a.building].outdoor && a.buildingName === a.name ? '' : ' (' + (buildings[a.building].outdoor ? esc(a.buildingName) : esc(a.buildingName) + ', ' + floorWord(a.floor)) + ')') + '.' });
+
+    // ----- the real route from the complete floor plans (routes.js)
+    if (a.lay && b.lay && window.PLMunLayout) {
+      var real = window.PLMunLayout.route(a.lay, b.lay);
+      if (real.length) {
+        real.forEach(function (s) { steps.push({ i: iconFor(s), t: esc(s.text) }); });
+        steps.push({ i: 'fa-flag-checkered', t: 'You have arrived at <b>' + esc(b.name) + '</b>.' });
+        var same = a.lay.bk === b.lay.bk || (window.PLMunLayout.nodeOf(a.lay) === window.PLMunLayout.nodeOf(b.lay));
+        return { summary: same ? 'You stay inside the same building. ' + real.length + ' steps.' : 'Different buildings. ' + real.length + ' steps.', steps: steps };
+      }
+    }
 
     if (a.building === b.building && !buildings[a.building].outdoor) {
       // ----- same building: never go outside
@@ -361,7 +396,7 @@
       '<button type="button" class="route-read"><i class="fa-solid fa-volume-high"></i> Read aloud</button></div>' +
       '<p class="route-summary" id="route-summary" hidden></p>' +
       '<ol class="route-steps" id="route-steps"></ol>' +
-      '<p class="route-note">Based on the campus office directory (buildings and floors). Follow the signs on each floor if something looks different.</p>';
+      '<p class="route-note">Based on the PLMUN campus map and floor plans. Follow the signs if something looks different.</p>';
     resultBox.parentNode.insertBefore(panel, resultBox.nextSibling);
 
     fromSel = panel.querySelector('#route-from');
