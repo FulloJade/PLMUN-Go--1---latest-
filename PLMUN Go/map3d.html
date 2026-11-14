@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>3D Campus Map | PLMUN Go</title>
+  <!-- Needs routes.js in the same folder (the layout + route steps). No other libraries. -->
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: Poppins, Arial, sans-serif; background: #0b2a5b; color: #fff; }
+    #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    #stage.drag { cursor: grabbing; }
+    .top { position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 8px; align-items: center; padding: 10px 12px; pointer-events: none; z-index: 5; }
+    .top > * { pointer-events: auto; }
+    .back { background: rgba(8,30,66,.85); color: #fff; text-decoration: none; padding: 9px 14px; border-radius: 999px; font-size: .85rem; font-weight: 600; border: 1px solid rgba(255,255,255,.25); }
+    .title { font-weight: 700; font-size: 1rem; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+    .chips { position: fixed; top: 56px; left: 0; right: 0; padding: 0 12px; display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; z-index: 5; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { white-space: nowrap; flex: 0 0 auto; }
+    .chip { border: 1px solid rgba(255,255,255,.3); background: rgba(8,30,66,.8); color: #fff; padding: 7px 12px; border-radius: 999px; font-size: .8rem; cursor: pointer; font-family: inherit; }
+    .chip.on { background: #fde047; color: #081e42; border-color: #fde047; font-weight: 700; }
+    #floors { top: 100px; }
+    .panel { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(8,30,66,.96); border-radius: 20px 20px 0 0; padding: 10px 14px 14px; z-index: 6; max-height: 52vh; overflow-y: auto; box-shadow: 0 -6px 24px rgba(0,0,0,.4); }
+    .panel.min .body { display: none; }
+    .grab { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; padding: 2px 0 6px; }
+    .grab small { font-weight: 500; opacity: .7; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .row select { flex: 1 1 150px; min-width: 0; padding: 10px; border-radius: 10px; border: 0; font-size: .88rem; font-family: inherit; }
+    .btn { border: 0; background: #fde047; color: #081e42; font-weight: 700; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: .88rem; }
+    .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); }
+    ol { margin: 6px 0 0; padding: 0; list-style: none; counter-reset: s; }
+    ol li { counter-increment: s; position: relative; padding: 8px 10px 8px 40px; margin-bottom: 6px; background: rgba(255,255,255,.07); border-radius: 10px; font-size: .86rem; line-height: 1.45; }
+    ol li::before { content: counter(s); position: absolute; left: 10px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: #fde047; color: #081e42; font-weight: 700; font-size: .75rem; display: flex; align-items: center; justify-content: center; }
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: .72rem; opacity: .85; margin-top: 8px; }
+    .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+    #info { position: fixed; left: 12px; right: 12px; bottom: 70px; z-index: 7; background: #fff; color: #081e42; border-radius: 14px; padding: 12px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.35); display: none; max-width: 420px; }
+    #info b { display: block; font-size: 1rem; }
+    #info small { color: #64748b; }
+    #info .row { margin: 8px 0 0; }
+    #info .btn { padding: 8px 12px; font-size: .8rem; }
+    #info .btn.ghost { color: #081e42; border-color: #94a3b8; }
+    .hint { position: fixed; right: 12px; top: 14px; font-size: .72rem; opacity: .8; text-align: right; z-index: 4; pointer-events: none; }
+    @media (max-width: 700px) { .hint { display: none; } }
+    @media (min-width: 900px) { .panel { left: auto; right: 16px; bottom: 16px; width: 400px; border-radius: 18px; max-height: 70vh; } #info { left: 16px; bottom: 16px; } }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div class="top">
+    <a class="back" href="index.html">← Home</a>
+    <span class="title">3D Campus Map</span>
+  </div>
+  <div class="hint">Drag to turn · pinch / scroll to zoom · tap a room</div>
+  <div class="chips" id="blds"></div>
+  <div class="chips" id="floors"></div>
+
+  <div id="info"></div>
+
+  <div class="panel" id="panel">
+    <div class="grab" id="grab"><span>🧭 Show a route</span><small id="gstate">tap to close</small></div>
+    <div class="body">
+      <div class="row"><select id="from"></select><select id="to"></select></div>
+      <div class="row"><button class="btn" id="go">Show route</button><button class="btn ghost" id="swap">Swap</button><button class="btn ghost" id="clear">Clear</button></div>
+      <ol id="steps"></ol>
+      <div class="legend">
+        <span><i style="background:#2f7de1"></i>Room</span><span><i style="background:#f59e0b"></i>Stairs</span>
+        <span><i style="background:#a855f7"></i>Elevator</span><span><i style="background:#22c55e"></i>Main doors</span>
+        <span><i style="background:#7b8794"></i>CR</span><span><i style="background:#fde047"></i>Route</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="routes.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var L = window.PLMunLayout, BLD = L.BUILDINGS;
+    var $ = function (id) { return document.getElementById(id); };
+    var cv = $('stage'), ctx = cv.getContext('2d');
+    var H = 3.6;                                   // height of one floor (map units)
+
+    /* ===== 1. WHERE EVERYTHING STANDS (map units; from the university map) =====
+       x = east, z = south. The main gate is at the bottom-left. Change a number to move or resize a building. */
+    var G = {
+      mabini:    { x0: 9,  x1: 26, z0: 24, z1: 32.5, floors: 3, color: '#3b7dd8', mode: 'north', label: 'Student Center' },
+      bonifacio: { x0: 33, x1: 54, z0: 24, z1: 32.5, floors: 4, color: '#2f9e63', mode: 'two',   label: 'Main (Bonifacio)' },
+      delpilar:  { x0: 57, x1: 73, z0: 24, z1: 32.5, floors: 5, color: '#d19a2a', mode: 'two',   label: 'Admin (Del Pilar)' },
+      rizal:     { x0: 40, x1: 72, z0: 40, z1: 48,   floors: 4, color: '#8b5cf6', mode: 'south', label: 'RLRC (Rizal)', flip: true }
+    };
+    var ORDER = ['mabini', 'bonifacio', 'delpilar', 'rizal'];
+    var NAMES = { mabini: 'Student Center', bonifacio: 'Main (Bonifacio)', delpilar: 'Admin (Del Pilar)', rizal: 'RLRC (Rizal)' };
+    var WALK_Z = 34.5, GATE = { x: 7, z: 56 };
+
+    function rowDepth(g) { return 3; }
+    // rectangle of one cell on a floor plan
+    function cellRect(bk, row, idx, len) {
+      var g = G[bk], W = g.x1 - g.x0, a = idx / len, b = (idx + 1) / len, x0, x1, z0, z1;
+      if (g.flip) { x0 = g.x1 - b * W; x1 = g.x1 - a * W; } else { x0 = g.x0 + a * W; x1 = g.x0 + b * W; }
+      if (g.mode === 'two') {
+        if (row === 'back') { z0 = g.z0; z1 = g.z0 + 3; } else { z0 = g.z1 - 3; z1 = g.z1; }
+      } else if (g.mode === 'north') { z0 = g.z0; z1 = g.z0 + 5.5; }
+      else { z0 = g.z0 + 2.5; z1 = g.z1; }
+      return { x0: x0, x1: x1, z0: z0, z1: z1 };
+    }
+    function hallZ(bk) {
+      var g = G[bk];
+      if (g.mode === 'two') return (g.z0 + g.z1) / 2;
+      if (g.mode === 'north') return g.z0 + 5.5 + (g.z1 - g.z0 - 5.5) / 2;
+      return g.z0 + 1.25;
+    }
+
+    /* ===== 2. camera ===== */
+    var cam = { yaw: 0.35, pitch: 0.75, dist: 150, tx: 40, ty: 0, tz: 38 }, goal = null;
+    var W = 0, Hh = 0, dpr = 1, FOV = 1, CX = 0, CY = 0;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; Hh = window.innerHeight;
+      cv.width = W * dpr; cv.height = Hh * dpr; cv.style.width = W + 'px'; cv.style.height = Hh + 'px';
+      FOV = Math.max(W, Hh) * 1.05;
+      // keep the map clear of the bottom sheet / side panel
+      CX = W >= 900 ? (W - 400) / 2 : W / 2; CY = W >= 900 ? Hh / 2 : Hh * 0.38;
+    }
+    var cy, sy_, cp, sp_;
+    function setM() { cy = Math.cos(cam.yaw); sy_ = Math.sin(cam.yaw); cp = Math.cos(cam.pitch); sp_ = Math.sin(cam.pitch); }
+    function proj(x, y, z) {
+      var qx = x - cam.tx, qy = y - cam.ty, qz = z - cam.tz;
+      var x1 = qx * cy + qz * sy_, z1 = -qx * sy_ + qz * cy, dp = -z1;
+      var y2 = qy * cp + dp * sp_, d = cam.dist + dp * cp - qy * sp_;
+      if (d < 1) d = 1;
+      return { x: CX + FOV * x1 / d, y: CY - FOV * y2 / d, d: d };
+    }
+    function camPos() {
+      var zp = cam.dist * cp, yy = cam.dist * sp_;
+      return { x: cam.tx - zp * sy_, y: cam.ty + yy, z: cam.tz + zp * cy };
+    }
+
+    /* ===== 3. drawing helpers ===== */
+    var LIGHT = (function () { var l = [-0.45, 0.8, 0.4], n = Math.hypot(l[0], l[1], l[2]); return [l[0] / n, l[1] / n, l[2] / n]; })();
+    function shade(hex, f) {
+      var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+      return 'rgb(' + Math.min(255, Math.round(r * f)) + ',' + Math.min(255, Math.round(g * f)) + ',' + Math.min(255, Math.round(b * f)) + ')';
+    }
+    var hits = [], labels = [];
+    // faces of a box: [normal, 4 corners]
+    function boxFaces(x0, x1, y0, y1, z0, z1) {
+      return [
+        { n: [0, 1, 0],  p: [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]] },
+        { n: [0, 0, 1],  p: [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]] },
+        { n: [0, 0, -1], p: [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]] },
+        { n: [1, 0, 0],  p: [[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]] },
+        { n: [-1, 0, 0], p: [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]] }
+      ];
+    }
+    var cpos;
+    function drawBox(x0, x1, y0, y1, z0, z1, color, alpha, o) {
+      o = o || {};
+      var faces = boxFaces(x0, x1, y0, y1, z0, z1), cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2, cz = (z0 + z1) / 2, list = [];
+      faces.forEach(function (f) {
+        var fc = [0, 0, 0];
+        f.p.forEach(function (q) { fc[0] += q[0] / 4; fc[1] += q[1] / 4; fc[2] += q[2] / 4; });
+        var vx = cpos.x - fc[0], vy = cpos.y - fc[1], vz = cpos.z - fc[2];
+        if (f.n[0] * vx + f.n[1] * vy + f.n[2] * vz <= 0) return;
+        var pp = f.p.map(function (q) { return proj(q[0], q[1], q[2]); });
+        var d = (pp[0].d + pp[1].d + pp[2].d + pp[3].d) / 4;
+        var lam = Math.max(0, f.n[0] * LIGHT[0] + f.n[1] * LIGHT[1] + f.n[2] * LIGHT[2]);
+        list.push({ pp: pp, d: d, f: 0.62 + 0.45 * lam, top: f.n[1] === 1 });
+      });
+      list.sort(function (a, b) { return b.d - a.d; });
+      list.forEach(function (it) {
+        ctx.beginPath();
+        ctx.moveTo(it.pp[0].x, it.pp[0].y);
+        for (var i = 1; i < 4; i++) ctx.lineTo(it.pp[i].x, it.pp[i].y);
+        ctx.closePath();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = shade(color, it.f);
+        ctx.fill();
+        ctx.globalAlpha = Math.min(1, alpha + 0.25);
+        ctx.strokeStyle = o.stroke || 'rgba(8,30,66,.55)';
+        ctx.lineWidth = o.lw || 1;
+        ctx.stroke();
+        if (o.room && it.top) hits.push({ poly: it.pp, room: o.room });
+      });
+      ctx.globalAlpha = 1;
+      return proj(cx, y1, cz);
+    }
+    function flat(x0, x1, z0, z1, y, color, alpha) {
+      var pp = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(function (q) { return proj(q[0], y, q[1]); });
+      ctx.beginPath(); ctx.moveTo(pp[0].x, pp[0].y); for (var i = 1; i < 4; i++) ctx.lineTo(pp[i].x, pp[i].y); ctx.closePath();
+      ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+    }
+    function flatPoly(pts, y, color, alpha) {
+      ctx.beginPath(); pts.forEach(function (q, i) { var p = proj(q[0], y, q[1]); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+      ctx.closePath(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
+    }
+    function stroke3(pts, color, w, y) {
+      ctx.beginPath(); pts.forEach(function (q, i) { var p = proj(q[0], y || 0.05, q[1]); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+      ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+    }
+    function text(t, x, y, size, color, bg) {
+      ctx.font = '600 ' + size + 'px Poppins, Arial, sans-serif';
+      var w = ctx.measureText(t).width;
+      if (bg) { ctx.fillStyle = bg; var r = 4; ctx.beginPath(); ctx.rect(x - w / 2 - 5, y - size * 0.85, w + 10, size * 1.5); ctx.fill(); }
+      ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.fillText(t, x, y + size * 0.3 - size * 0.05);
+    }
+
+    /* ===== 4. state ===== */
+    var focus = null, floorSel = null, route = null, routeSteps = [], marks = [], selRoom = null, t0 = Date.now();
+
+    function floorsOf(bk) { return Object.keys(BLD[bk].floors).map(Number).sort(function (a, b) { return a - b; }); }
+
+    // is this floor drawn, and how?
+    function floorMode(bk, f) {
+      if (route) return 'ghost';
+      if (focus && focus !== bk) return 'dim';
+      if (focus === bk && floorSel) { if (f > floorSel) return 'hidden'; if (f === floorSel) return 'rooms'; return 'below'; }
+      return 'solid';
+    }
+
+    /* ===== 5. the scene ===== */
+    function drawGround() {
+      flat(-10, 100, 10, 80, 0, '#9bc58a');
+      // greens
+      flat(12, 26, 41, 46, 0.02, '#8ad06a'); flat(74, 82, 36, 44, 0.02, '#8ad06a'); flat(30, 52, 51, 55, 0.02, '#8ad06a'); flat(62, 72, 51, 55, 0.02, '#4a90e2');
+      // road (dark): gate -> up the left -> east along the front
+      flatPoly([[5.2, 58], [8.8, 58], [8.8, 33], [74, 33], [74, 36], [5.2, 36]], 0.04, '#4b5563');
+      stroke3([[7, 58], [7, 34.5], [74, 34.5]], 'rgba(255,255,255,.6)', 1.2, 0.06);
+      // walkways (light)
+      flat(54.4, 57, 34.5, 40, 0.05, '#e5e7eb');
+      flat(26, 56, 38.4, 40, 0.05, '#e5e7eb');
+      flat(26, 28, 34, 40, 0.05, '#e5e7eb');
+    }
+    function drawProps() {
+      // gate
+      var g1 = proj(GATE.x - 2.4, 0, GATE.z), g2 = proj(GATE.x + 2.4, 0, GATE.z);
+      drawBox(GATE.x - 3.2, GATE.x - 2.4, 0, 3.4, GATE.z - .4, GATE.z + .4, '#e5e7eb', 1);
+      drawBox(GATE.x + 2.4, GATE.x + 3.2, 0, 3.4, GATE.z - .4, GATE.z + .4, '#e5e7eb', 1);
+      var gp = proj(GATE.x, 4.8, GATE.z); labels.push({ t: 'Main Gate', x: gp.x, y: gp.y, s: 12, c: '#fff', bg: 'rgba(8,30,66,.8)' });
+      // covered court
+      var cp_ = drawBox(12, 25, 0, 4, 36, 41, '#f4b740', 1);
+      labels.push({ t: 'Covered Court / Gym', x: cp_.x, y: cp_.y - 12, s: 11, c: '#fff', bg: 'rgba(8,30,66,.8)' });
+      // gazebo
+      var gz = drawBox(30.5, 34.5, 0, 2.6, 41, 45, '#d6a96a', 1);
+      labels.push({ t: 'Gazebo', x: gz.x, y: gz.y - 10, s: 10, c: '#fff', bg: 'rgba(8,30,66,.7)' });
+      // elevator / entrance strip between Main and Admin
+      var s = drawBox(54, 57, 0, 5 * H, 24, 32.5, '#9ca3af', route ? .25 : .9);
+    }
+
+    function drawBuilding(bk) {
+      var g = G[bk], fl = floorsOf(bk), top = null;
+      fl.forEach(function (f) {
+        var m = floorMode(bk, f); if (m === 'hidden') return;
+        var y0 = (f - 1) * H, y1 = y0 + H - 0.2;
+        var alpha = { solid: 0.93, dim: 0.16, ghost: 0.2, below: 0.3, rooms: 1 }[m];
+        if (m === 'rooms') {
+          drawBox(g.x0, g.x1, y0, y0 + 0.3, g.z0, g.z1, '#e8e4d8', 1, { stroke: 'rgba(8,30,66,.5)' });
+          drawRooms(bk, f, y0 + 0.3);
+        } else {
+          var p = drawBox(g.x0, g.x1, y0, y1, g.z0, g.z1, g.color, alpha, { stroke: m === 'solid' ? 'rgba(8,30,66,.5)' : 'rgba(255,255,255,.35)' });
+          top = p;
+        }
+      });
+      if (top && !route) labels.push({ t: g.label, x: top.x, y: top.y - 14, s: 13, c: '#081e42', bg: 'rgba(253,224,71,.95)' });
+    }
+
+    function drawRooms(bk, f, y) {
+      var fl = BLD[bk].floors[f]; if (!fl || fl.list) return;
+      var items = [];
+      Object.keys(fl).forEach(function (row) {
+        var arr = fl[row];
+        arr.forEach(function (n, i) {
+          if (n === '#gap') return;
+          var r = cellRect(bk, row, i, arr.length), isM = n.charAt(0) === '#', col, h = 1.3;
+          if (n === '#stairs') col = '#f59e0b'; else if (n === '#elevator') col = '#a855f7'; else if (n === '#doors') { col = '#22c55e'; h = 0.4; }
+          else col = /(^| )cr$/i.test(n) ? '#7b8794' : '#2f7de1';
+          var room = isM ? null : BY(bk, f, n);
+          var d = proj((r.x0 + r.x1) / 2, y, (r.z0 + r.z1) / 2).d;
+          items.push({ r: r, col: col, h: h, name: n, room: room, d: d, mk: isM });
+        });
+      });
+      items.sort(function (a, b) { return b.d - a.d; });
+      items.forEach(function (it) {
+        var inset = 0.1, r = it.r;
+        var sel = selRoom && it.room && selRoom.key === it.room.key;
+        var top = drawBox(r.x0 + inset, r.x1 - inset, y, y + it.h, r.z0 + inset, r.z1 - inset, sel ? '#fde047' : it.col, 1, { room: it.room, stroke: 'rgba(8,30,66,.6)' });
+        if (!it.mk) {
+          var wpx = Math.abs(proj(r.x1, y, r.z0).x - proj(r.x0, y, r.z0).x), hpx = Math.abs(proj(r.x0, y, r.z1).y - proj(r.x0, y, r.z0).y);
+          var wide = Math.max(wpx, hpx * 1.5);
+          if (wide > 38) labels.push({ t: it.name.length > 24 ? it.name.slice(0, 22) + '…' : it.name, x: top.x, y: top.y, s: Math.max(8, Math.min(12, wide / 7)), c: '#fff', bg: 'rgba(8,30,66,.65)', fit: wide + 20 });
+        }
+      });
+    }
+    function BY(bk, f, n) { return L.BY_KEY[bk + '|' + f + '|' + n] || null; }
+
+    /* ===== 6. the route in 3D ===== */
+    function P(x, z, f) { return { x: x, y: (f - 1) * H + 1.0, z: z }; }
+    function cellCenter(bk, f, row, idx) {
+      var arr = BLD[bk].floors[f][row], r = cellRect(bk, row, idx, arr.length);
+      return { x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 };
+    }
+    function stairsList(bk, f) {
+      var fl = BLD[bk].floors[f], out = [];
+      if (!fl || fl.list) return out;
+      Object.keys(fl).forEach(function (row) { fl[row].forEach(function (n, i) { if (n === '#stairs') { var c = cellCenter(bk, f, row, i); c.i = i; c.n = fl[row].length; out.push(c); } }); });
+      return out;
+    }
+    function pickSt(bk, from, to, nearX) {
+      var s = stairsList(bk, from); if (!s.length) return null;
+      if (bk === 'rizal') {                      // plan-left stairs = DOWN (east), plan-right = UP (west)
+        s.sort(function (a, b) { return a.i / a.n - b.i / b.n; });
+        return to > from ? s[s.length - 1] : s[0];
+      }
+      var o = stairsList(bk, to);
+      var both = s.filter(function (c) { return o.some(function (d) { return Math.abs(d.x - c.x) < 3; }); });
+      if (!both.length) both = s;
+      both.sort(function (a, b) { return Math.abs(a.x - nearX) - Math.abs(b.x - nearX); });
+      return both[0];
+    }
+    function doorsX(bk) {
+      var fl = BLD[bk].floors[1];
+      if (!fl || fl.list) return (G[bk].x0 + G[bk].x1) / 2;
+      var rows = Object.keys(fl);
+      for (var i = 0; i < rows.length; i++) { var k = fl[rows[i]].indexOf('#doors'); if (k > -1) return cellCenter(bk, 1, rows[i], k).x; }
+      return (G[bk].x0 + G[bk].x1) / 2;
+    }
+    function doorOut(bk) {          // the point just outside the main doors
+      var g = G[bk], x = doorsX(bk);
+      return g.mode === 'south' ? { x: x, z: g.z0 - 0.9 } : { x: x, z: g.z1 + 0.9 };
+    }
+    function roomXZ(r) {
+      if (r.bk === 'campus') return r.name === 'Main Gate' ? { x: GATE.x, z: GATE.z - 2 } : { x: 18.5, z: 35.2 };
+      if (!r.row) return { x: (G[r.bk].x0 + G[r.bk].x1) / 2, z: hallZ(r.bk) };
+      return cellCenter(r.bk, r.floor, r.row, r.idx);
+    }
+    // walk inside one building from (cur,floor) to floor `to`; returns the new position
+    function inside(pts, bk, cur, from, to) {
+      if (from === to) return cur;
+      var st = pickSt(bk, from, to, cur.x), hz = hallZ(bk);
+      if (!st) return cur;
+      pts.push(P(cur.x, hz, from)); pts.push(P(st.x, hz, from)); pts.push(P(st.x, st.z, from));
+      pts.push(P(st.x, st.z, to)); pts.push(P(st.x, hz, to));
+      return { x: st.x, z: hz };
+    }
+    function routePoints(a, b) {
+      var pts = [], na = L.nodeOf(a), nb = L.nodeOf(b), A = roomXZ(a), Bz = roomXZ(b);
+      if (a.bk !== 'campus') pts.push(P(A.x, A.z, a.floor)); else pts.push({ x: A.x, y: 0.6, z: A.z });
+      var cur = { x: A.x, z: A.z };
+
+      if (a.bk === b.bk && a.bk !== 'campus') {
+        cur = inside(pts, a.bk, cur, a.floor, b.floor);
+        pts.push(P(cur.x, hallZ(a.bk), b.floor)); pts.push(P(Bz.x, hallZ(a.bk), b.floor)); pts.push(P(Bz.x, Bz.z, b.floor));
+        return pts;
+      }
+      if (na === 'mainadmin' && nb === 'mainadmin') {                    // one connected building
+        var fromAdmin = a.bk === 'delpilar', mx = fromAdmin ? G.delpilar.x0 + 0.6 : G.bonifacio.x1 - 0.6, nx = 55.5;
+        var maxF = function (k) { return floorsOf(k)[floorsOf(k).length - 1]; };
+        var cf = b.floor <= maxF(a.bk) ? b.floor : maxF(a.bk);
+        cur = inside(pts, a.bk, cur, a.floor, cf);
+        var hz = hallZ(a.bk);
+        pts.push(P(cur.x, hz, cf)); pts.push(P(mx, hz, cf)); pts.push(P(nx, hz, cf));
+        var bx = fromAdmin ? G.bonifacio.x1 - 0.6 : G.delpilar.x0 + 0.6;
+        pts.push(P(bx, hz, cf)); cur = { x: bx, z: hz };
+        cur = inside(pts, b.bk, cur, cf, b.floor);
+        pts.push(P(cur.x, hallZ(b.bk), b.floor)); pts.push(P(Bz.x, hallZ(b.bk), b.floor)); pts.push(P(Bz.x, Bz.z, b.floor));
+        return pts;
+      }
+      // different places: out of A ...
+      var aOut, bOut;
+      if (a.bk !== 'campus') {
+        cur = inside(pts, a.bk, cur, a.floor, 1);
+        var dx = doorsX(a.bk), hz2 = hallZ(a.bk);
+        pts.push(P(cur.x, hz2, 1)); pts.push(P(dx, hz2, 1));
+        aOut = doorOut(a.bk); pts.push(P(dx, G[a.bk].mode === 'south' ? G[a.bk].z0 : G[a.bk].z1, 1)); pts.push({ x: aOut.x, y: 0.6, z: aOut.z });
+      } else aOut = { x: A.x, z: A.z };
+      bOut = b.bk !== 'campus' ? doorOut(b.bk) : { x: Bz.x, z: Bz.z };
+      // ... across the campus ...
+      var out = [];
+      var west = function (n, o) { return n === 'rizal' ? (o.x < 40 ? { x: 28, via: true } : { x: 55.5, via: false }) : { x: o.x }; };
+      var la, lb;
+      if (na === 'rizal') { la = west('rizal', bOut); out.push([aOut.x, aOut.z]); if (la.via) { out.push([aOut.x, 39.2]); out.push([la.x, 39.2]); out.push([la.x, WALK_Z]); } else { out.push([aOut.x, 39.2]); out.push([la.x, 39.2]); out.push([la.x, WALK_Z]); } }
+      else if (na === 'gate') { out.push([GATE.x, GATE.z - 2]); out.push([GATE.x, WALK_Z]); }
+      else { out.push([aOut.x, aOut.z]); out.push([aOut.x, WALK_Z]); }
+      var lastX = out[out.length - 1][0];
+      if (nb === 'rizal') {
+        var lb2 = west('rizal', aOut);
+        out.push([lb2.x, WALK_Z]); out.push([lb2.x, 39.2]); out.push([bOut.x, 39.2]); out.push([bOut.x, bOut.z]);
+      } else if (nb === 'gate') { out.push([GATE.x, WALK_Z]); out.push([GATE.x, GATE.z - 2]); }
+      else { out.push([bOut.x, WALK_Z]); out.push([bOut.x, bOut.z]); }
+      out.forEach(function (q) { pts.push({ x: q[0], y: 0.6, z: q[1] }); });
+      // ... and into B
+      if (b.bk !== 'campus') {
+        var dx2 = doorsX(b.bk), hz3 = hallZ(b.bk), g2 = G[b.bk];
+        pts.push({ x: dx2, y: 0.6, z: g2.mode === 'south' ? g2.z0 : g2.z1 }); pts.push(P(dx2, hz3, 1));
+        cur = { x: dx2, z: hz3 };
+        cur = inside(pts, b.bk, cur, 1, b.floor);
+        pts.push(P(cur.x, hz3, b.floor)); pts.push(P(Bz.x, hz3, b.floor)); pts.push(P(Bz.x, Bz.z, b.floor));
+      }
+      return pts;
+    }
+
+    function drawRoute(time) {
+      if (!route) return;
+      var pts = route;
+      // total length for the moving dot
+      var seg = [], total = 0;
+      for (var i = 1; i < pts.length; i++) { var d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z); seg.push(d); total += d; }
+      function at(t) { var s = t * total, k = 0; while (k < seg.length - 1 && s > seg[k]) { s -= seg[k]; k++; } var u = seg[k] ? s / seg[k] : 0; var a = pts[k], b = pts[k + 1]; return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z + (b.z - a.z) * u }; }
+      var pp = pts.map(function (p) { return proj(p.x, p.y, p.z); });
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.beginPath(); pp.forEach(function (p, i) { i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+      ctx.strokeStyle = 'rgba(8,30,66,.85)'; ctx.lineWidth = 8; ctx.stroke();
+      ctx.strokeStyle = '#fde047'; ctx.lineWidth = 4.5; ctx.stroke();
+      // moving dots
+      for (var k = 0; k < 4; k++) {
+        var t = ((time / 5000) + k / 4) % 1, p = at(t), q = proj(p.x, p.y, p.z);
+        ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#081e42'; ctx.lineWidth = 2; ctx.stroke();
+      }
+      // start / end pins
+      [[pts[0], '#22c55e', 'START'], [pts[pts.length - 1], '#ef4444', 'END']].forEach(function (m) {
+        var b = proj(m[0].x, m[0].y, m[0].z), t = proj(m[0].x, m[0].y + 5, m[0].z);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.strokeStyle = m[1]; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath(); ctx.arc(t.x, t.y, 8, 0, 7); ctx.fillStyle = m[1]; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        text(m[2], t.x, t.y - 16, 11, '#fff', m[1]);
+      });
+    }
+
+    /* ===== 7. frame ===== */
+    function frame() {
+      if (goal) {
+        var k = 0.12, done = true;
+        ['tx', 'ty', 'tz', 'dist', 'yaw', 'pitch'].forEach(function (p) { var d = goal[p] - cam[p]; if (Math.abs(d) > 0.01) done = false; cam[p] += d * k; });
+        if (done) goal = null;
+      }
+      setM(); cpos = camPos();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var sky = ctx.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, '#0b2a5b'); sky.addColorStop(1, '#2a5fa8');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, Hh);
+      hits = []; labels = [];
+      drawGround(); drawProps();
+      ORDER.map(function (bk) { var g = G[bk]; return { bk: bk, d: proj((g.x0 + g.x1) / 2, 0, (g.z0 + g.z1) / 2).d }; })
+        .sort(function (a, b) { return b.d - a.d; })
+        .forEach(function (o) { drawBuilding(o.bk); });
+      drawRoute(Date.now() - t0);
+      labels.forEach(function (l) { text(l.t, l.x, l.y, l.s, l.c, l.bg); });
+      requestAnimationFrame(frame);
+    }
+
+    /* ===== 8. controls (drag, pinch, scroll, tap) ===== */
+    var ptrs = {}, lastD = 0, moved = 0, startXY = null;
+    cv.addEventListener('pointerdown', function (e) { cv.setPointerCapture(e.pointerId); ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; moved = 0; startXY = { x: e.clientX, y: e.clientY }; cv.classList.add('drag'); goal = null; });
+    cv.addEventListener('pointermove', function (e) {
+      var p = ptrs[e.pointerId]; if (!p) return;
+      var ids = Object.keys(ptrs);
+      if (ids.length === 2) {
+        var a = ptrs[ids[0]], b = ptrs[ids[1]];
+        a = ids[0] == e.pointerId ? { x: e.clientX, y: e.clientY } : a; b = ids[1] == e.pointerId ? { x: e.clientX, y: e.clientY } : b;
+        var d = Math.hypot(a.x - b.x, a.y - b.y); if (lastD) cam.dist = Math.max(25, Math.min(260, cam.dist * lastD / d)); lastD = d; moved = 99;
+      } else {
+        var dx = e.clientX - p.x, dy = e.clientY - p.y; moved += Math.abs(dx) + Math.abs(dy);
+        if (e.shiftKey || e.buttons === 2) { var s = cam.dist / 600; cam.tx -= (dx * cy - dy * sy_ * 0) * s; cam.tz -= dy * s; }
+        else { cam.yaw -= dx * 0.006; cam.pitch = Math.max(0.12, Math.min(1.45, cam.pitch + dy * 0.005)); }
+      }
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    });
+    function up(e) {
+      var wasTap = moved < 6 && ptrs[e.pointerId];
+      delete ptrs[e.pointerId]; lastD = 0; cv.classList.remove('drag');
+      if (wasTap) tap(e.clientX, e.clientY);
+    }
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', function (e) { delete ptrs[e.pointerId]; lastD = 0; });
+    cv.addEventListener('wheel', function (e) { e.preventDefault(); cam.dist = Math.max(25, Math.min(260, cam.dist * (e.deltaY > 0 ? 1.1 : 0.9))); goal = null; }, { passive: false });
+    cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+    function inPoly(poly, x, y) {
+      var c = false;
+      for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        if (((poly[i].y > y) !== (poly[j].y > y)) && (x < (poly[j].x - poly[i].x) * (y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) c = !c;
+      }
+      return c;
+    }
+    function tap(x, y) {
+      for (var i = hits.length - 1; i >= 0; i--) {
+        if (hits[i].room && inPoly(hits[i].poly, x, y)) { showInfo(hits[i].room); return; }
+      }
+      $('info').style.display = 'none'; selRoom = null;
+    }
+    function showInfo(r) {
+      selRoom = r;
+      var box = $('info');
+      box.innerHTML = '<b></b><small></small><div class="row"><button class="btn" data-w="from">Start here</button><button class="btn ghost" data-w="to">Go here</button><button class="btn ghost" data-w="x">✕</button></div>';
+      box.querySelector('b').textContent = r.name; box.querySelector('small').textContent = r.where + ' — ' + L.where(r);
+      box.style.display = 'block';
+      box.onclick = function (e) {
+        var w = e.target.getAttribute && e.target.getAttribute('data-w'); if (!w) return;
+        if (w === 'from') $('from').value = r.key; if (w === 'to') $('to').value = r.key;
+        if (w === 'x') { box.style.display = 'none'; selRoom = null; return; }
+        if ($('from').value && $('to').value) showRoute(); else { $('panel').classList.remove('min'); }
+      };
+    }
+
+    /* ===== 9. UI ===== */
+    function fly(o) { goal = { tx: o.tx, ty: o.ty || 0, tz: o.tz, dist: o.dist, yaw: o.yaw == null ? cam.yaw : o.yaw, pitch: o.pitch == null ? cam.pitch : o.pitch }; }
+    function chips() {
+      var b = $('blds'); b.innerHTML = '';
+      function mk(label, key) {
+        var c = document.createElement('button'); c.className = 'chip' + (focus === key ? ' on' : ''); c.textContent = label;
+        c.onclick = function () { setFocus(key); }; b.appendChild(c);
+      }
+      mk('Whole campus', null); ORDER.forEach(function (k) { mk(NAMES[k], k); });
+      var f = $('floors'); f.innerHTML = '';
+      if (focus) {
+        var all = document.createElement('button'); all.className = 'chip' + (!floorSel ? ' on' : ''); all.textContent = 'All floors';
+        all.onclick = function () { floorSel = null; chips(); }; f.appendChild(all);
+        floorsOf(focus).forEach(function (n) {
+          var c = document.createElement('button'); c.className = 'chip' + (floorSel === n ? ' on' : ''); c.textContent = L.ORD[n] + ' floor';
+          c.onclick = function () { floorSel = n; chips(); }; f.appendChild(c);
+        });
+      }
+    }
+    function setFocus(k) {
+      focus = k; floorSel = null; route = null; $('steps').innerHTML = ''; $('info').style.display = 'none'; selRoom = null; chips();
+      if (!k) fly({ tx: 40, tz: 38, dist: 150, yaw: 0.35, pitch: 0.75 });
+      else { var g = G[k]; fly({ tx: (g.x0 + g.x1) / 2, ty: 3, tz: (g.z0 + g.z1) / 2, dist: Math.max(34, (g.x1 - g.x0) * 1.5), yaw: 0.2, pitch: 0.95 }); }
+    }
+    function fill(sel) {
+      var html = '<option value="">' + (sel === 'from' ? 'From: where are you?' : 'To: where to?') + '</option>', groups = {}, ord = [];
+      L.ROOMS.forEach(function (r) { var g = r.bk === 'campus' ? 'Campus grounds' : BLD[r.bk].name; if (!groups[g]) { groups[g] = []; ord.push(g); } groups[g].push(r); });
+      ord.forEach(function (g) {
+        html += '<optgroup label="' + g + '">' + groups[g].map(function (r) { return '<option value="' + r.key.replace(/"/g, '&quot;') + '">' + r.name.replace(/&/g, '&amp;') + (r.bk === 'campus' ? '' : ' · ' + r.floor + 'F') + '</option>'; }).join('') + '</optgroup>';
+      });
+      $(sel).innerHTML = html;
+    }
+    function showRoute() {
+      var a = L.BY_KEY[$('from').value], b = L.BY_KEY[$('to').value];
+      if (!a || !b) { $('steps').innerHTML = '<li>Pick where you are and where you want to go.</li>'; return; }
+      if (a.key === b.key) { $('steps').innerHTML = '<li>You are already there.</li>'; return; }
+      focus = null; floorSel = null; chips();
+      route = routePoints(a, b);
+      routeSteps = L.route(a, b);
+      $('steps').innerHTML = routeSteps.map(function (s) { return '<li></li>'; }).join('');
+      Array.prototype.forEach.call($('steps').children, function (li, i) { li.textContent = routeSteps[i].text; });
+      $('info').style.display = 'none';
+      // frame the whole route
+      var minx = 1e9, maxx = -1e9, minz = 1e9, maxz = -1e9;
+      route.forEach(function (p) { minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); minz = Math.min(minz, p.z); maxz = Math.max(maxz, p.z); });
+      var span = Math.max(maxx - minx, (maxz - minz) * 1.4, 22);
+      fly({ tx: (minx + maxx) / 2, ty: 3, tz: (minz + maxz) / 2, dist: Math.min(240, span * (W < 700 ? 2.7 : 1.9) + 20), pitch: 0.9 });
+      $('gstate').textContent = 'tap to hide';
+    }
+    $('go').onclick = showRoute;
+    $('swap').onclick = function () { var t = $('from').value; $('from').value = $('to').value; $('to').value = t; if ($('from').value && $('to').value) showRoute(); };
+    $('clear').onclick = function () { route = null; $('steps').innerHTML = ''; $('from').value = ''; $('to').value = ''; setFocus(null); };
+    $('grab').onclick = function () { var p = $('panel'); p.classList.toggle('min'); $('gstate').textContent = p.classList.contains('min') ? 'tap to open' : 'tap to hide'; };
+
+    window.addEventListener('resize', resize);
+    resize(); fill('from'); fill('to'); chips();
+    if (window.innerWidth < 900) { /* leave the panel open but short */ }
+    // ?from=...&to=... opens a route straight away (handy for QR codes)
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.get('from')) { var a = L.find(q.get('from')); if (a) $('from').value = a.key; }
+      if (q.get('to')) { var b = L.find(q.get('to')); if (b) $('to').value = b.key; }
+      if ($('from').value && $('to').value) showRoute();
+    } catch (e) { }
+    window.PLMun3D = { showRoute: showRoute, setFocus: setFocus, cam: cam, G: G, setFloor: function (n) { floorSel = n; chips(); } };
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
