@@ -290,6 +290,23 @@
       flat(57.4, 64.2, 33.4, 46.2, -0.28, '#6b7280');             // parking (west side, beside the pathway)
       ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1;
       for (var px = 58.1; px < 64.2; px += 1.6) { [[34.2, 38.2], [41.6, 45.6]].forEach(function (r) { var c1 = proj(px, -0.26, r[0]), c2 = proj(px, -0.26, r[1]); ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y); ctx.stroke(); }); }
+      flat(29.5, 53, 59.4, 64.4, 0.03, '#7fcf6a');               // Centennial Park
+      flat(62, 72.5, 60, 64.5, 0.04, '#5b8fd6');
+      // building shadows
+      ORDER.forEach(function (bk) { var g = G[bk], hh = floorsOf(bk).length * H; flat(g.x0 + 1.2, g.x1 + 0.8 + hh * 0.25, g.z0 + 1, g.z1 + 1 + hh * 0.3, 0.04, '#000', 0.16); });
+      // ring road (as on the university map)
+      roadSeg(7, 70, 7, WZ, 3);
+      roadSeg(7, WZ, 28, WZ, 3);
+      roadSeg(28, 15.5, 28, 58, 2.8);
+      roadSeg(28, 15.5, 75, 15.5, 2.8);
+      roadSeg(75, 15.5, 75, 58, 2.8);
+      roadSeg(28, 58, 75, 58, 2.8);
+      [[[7, 70], [7, WZ], [28, WZ]], [[28, 15.5], [75, 15.5], [75, 58], [28, 58], [28, 15.5]]].forEach(function (p) {
+        ctx.setLineDash([6, 6]); stroke3(p, 'rgba(255,255,255,.75)', 1.2, 0.06); ctx.setLineDash([]);
+      });
+      // walkway in front of the RLRC
+      flat(29.4, 73.6, QUAD.z1, 46.9, 0.06, '#d9d3c3');
+      [[57.0, 57.4, 33.4, 46.6], [73.2, 73.6, 33.4, 46.6], [64.2, 64.6, 33.4, 46.2], [57.0, 73.6, 46.2, 46.6]].forEach(function (r) { flat(r[0], r[1], r[2], r[3], -0.26, '#c3ccd8'); });
       // food stalls row (east of the ring road)
       flat(76.4, 81.6, 32.2, 47.4, 0.05, '#e6dfcd');
       // the QUADRANGLE: big, paved and LOWER than the walkways around it
@@ -307,22 +324,17 @@
       var np = proj(68.9, -0.2, 34.6); var pk = proj(60.8, -0.2, 40); labels.push({ t: 'Parking', x: pk.x, y: pk.y, s: 10, c: '#fff', bg: 'rgba(55,65,81,.85)' }); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.85)' });
       var fs = proj(79.4, 2, 39.8); labels.push({ t: 'Food stalls', x: fs.x, y: fs.y - 14, s: 10, c: '#fff', bg: 'rgba(154,52,18,.9)' });
     }
-    function curbs() {              // the low walls that make the quadrangle look sunken
-      var q = QUAD, c = '#b8c2cf';
-      drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z0 - 0.4, q.z0, c, 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(q.x0 - 0.4, q.x0, -0.35, 0.12, q.z0, q.z1, c, 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(q.x1, q.x1 + 0.4, -0.35, 0.12, q.z0, q.z1, c, 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z1, q.z1 + 0.4, c, 1, { stroke: 'rgba(8,30,66,.35)' });
+    function curbSide(i) {
+      var q = QUAD, c = '#b8c2cf', st = { stroke: 'rgba(8,30,66,.35)' };
+      if (i === 0) drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z0 - 0.4, q.z0, c, 1, st);
+      if (i === 1) drawBox(q.x0 - 0.4, q.x0, -0.35, 0.12, q.z0, q.z1, c, 1, st);
+      if (i === 2) drawBox(q.x1, q.x1 + 0.4, -0.35, 0.12, q.z0, q.z1, c, 1, st);
+      if (i === 3) drawBox(q.x0 - 0.4, q.x1 + 0.4, -0.35, 0.12, q.z1, q.z1 + 0.4, c, 1, st);
     }
     function bench(x, z, along) {
       if (along) drawBox(x - 0.9, x + 0.9, 0, 0.55, z - 0.28, z + 0.28, '#8b5a2b', 1); else drawBox(x - 0.28, x + 0.28, 0, 0.55, z - 0.9, z + 0.9, '#8b5a2b', 1);
     }
     function drawQuadProps() {
-      curbs();
-      drawBox(57.0, 57.4, -0.35, 0.12, 33.4, 46.6, '#b8c2cf', 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(73.2, 73.6, -0.35, 0.12, 33.4, 46.6, '#b8c2cf', 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(64.2, 64.6, -0.35, 0.12, 33.4, 46.2, '#b8c2cf', 1, { stroke: 'rgba(8,30,66,.35)' });
-      drawBox(57.0, 73.6, -0.35, 0.12, 46.2, 46.6, '#b8c2cf', 1, { stroke: 'rgba(8,30,66,.35)' });
       bench(36, 36.3, true); bench(47, 36.3, true); bench(36, 44.6, true); bench(47, 44.6, true);
       // flag pole is NOT here: it stands in front of Mabini (see drawStage)
     }
@@ -410,6 +422,16 @@
       drawBox(79.3, 79.6, 1.1, 2.7, z - 0.85, z + 0.85, '#d6c9a8', 1);
       [[77.4, z - 0.9], [77.4, z + 0.7]].forEach(function (p) { drawBox(p[0], p[0] + 0.2, 0, 2.7, p[1], p[1] + 0.2, '#6b7280', 1); });
       drawBox(77.2, 79.7, 2.7, 3.05, z - 1.0, z + 1.0, c, 1, { stroke: 'rgba(0,0,0,.4)' });
+    }
+    function drawSideDoor() {
+      var g = G.bonifacio, y0 = BASEY.bonifacio, z = 24.5, st = { stroke: 'rgba(60,50,30,.45)' };
+      flat(29.4, 31.5, z - 1.8, z + 1.8, 0.05, '#d9d3c3');
+      drawBox(31.5, 32.1, 0, 0.3, z - 1.8, z + 1.8, '#e8e0cc', 1, st);
+      drawBox(32.1, 32.7, 0, 0.6, z - 1.8, z + 1.8, '#e8e0cc', 1, st);
+      drawBox(g.x0 - 0.16, g.x0, y0, y0 + 3.5, z - 1.9, z + 1.9, '#e5e7eb', 1, { stroke: 'rgba(8,30,66,.5)' });
+      drawBox(g.x0 - 0.24, g.x0, y0, y0 + 3.2, z - 1.7, z - 0.05, '#38bdf8', 1, { stroke: 'rgba(8,30,66,.6)' });
+      drawBox(g.x0 - 0.24, g.x0, y0, y0 + 3.2, z + 0.05, z + 1.7, '#38bdf8', 1, { stroke: 'rgba(8,30,66,.6)' });
+      var lp = proj(31, y0 + 4.2, z); labels.push({ t: 'Side entrance', x: lp.x, y: lp.y, s: 9, c: '#fff', bg: 'rgba(8,30,66,.8)' });
     }
     function drawDoor(bk) {
       var g = G[bk], x = doorsX(bk), y0 = BASEY[bk] || 0, nz = bk === 'rizal', zf = nz ? g.z0 : g.z1, a = nz ? zf - 0.16 : zf, b = nz ? zf : zf + 0.16;
@@ -638,13 +660,15 @@
       hits = []; labels = [];
       drawGround();
       var items = [];
-      ORDER.forEach(function (bk) { var g = G[bk]; items.push({ d: proj((g.x0 + g.x1) / 2, 0, (g.z0 + g.z1) / 2).d, f: function () { drawBuilding(bk); } }); });
+      ORDER.forEach(function (bk) { var g = G[bk]; items.push({ d: proj(Math.max(g.x0, Math.min(g.x1, cpos.x)), 0, Math.max(g.z0, Math.min(g.z1, cpos.z))).d, f: function () { drawBuilding(bk); } }); });
       items.push({ d: proj(55.5, 0, 28).d, f: drawStrip });
       items.push({ d: proj(GATE.x, 0, GATE.z).d, f: drawGate });
       items.push({ d: proj(18.5, 0, 42).d, f: drawCourt });
       items.push({ d: proj(32.5, 0, 49.5).d, f: drawGazebo });
       items.push({ d: proj(53, 0, 30.5).d - 6, f: drawTerrace });
       items.push({ d: proj(41, 0, 40).d, f: drawQuadProps });
+      [[41.6, 33.2], [29.6, 39.4], [53.6, 39.4], [41.6, 45.6]].forEach(function (m, i) { items.push({ d: proj(m[0], 0, m[1]).d, f: function () { curbSide(i); } }); });
+      items.push({ d: proj(32.8, 0, 24.5).d - 0.5, f: drawSideDoor });
       CARS.forEach(function (c) { items.push({ d: proj(c.x, 0, c.z).d, f: function () { drawCar(c); } }); });
       STALLS.forEach(function (z, i) { items.push({ d: proj(78.5, 0, z).d, f: function () { drawStall(z, i); } }); });
       ['mabini', 'rizal'].forEach(function (bk) { items.push({ d: proj(doorsX(bk), 0, bk === 'rizal' ? G[bk].z0 : G[bk].z1).d - 0.5, f: function () { drawDoor(bk); } }); });
