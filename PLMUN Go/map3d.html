@@ -111,7 +111,7 @@
     }
 
     /* ===== 2. camera ===== */
-    var cam = { yaw: 0.35, pitch: 0.75, dist: 150, tx: 40, ty: 0, tz: 38 }, goal = null;
+    var cam = { yaw: 0.25, pitch: 1.0, dist: 128, tx: 43, ty: 0, tz: 38 }, goal = null;
     var W = 0, Hh = 0, dpr = 1, FOV = 1, CX = 0, CY = 0;
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -119,7 +119,7 @@
       cv.width = W * dpr; cv.height = Hh * dpr; cv.style.width = W + 'px'; cv.style.height = Hh + 'px';
       FOV = Math.max(W, Hh) * 1.05;
       // keep the map clear of the bottom sheet / side panel
-      CX = W >= 900 ? (W - 400) / 2 : W / 2; CY = W >= 900 ? Hh / 2 : Hh * 0.38;
+      CX = W / 2; CY = W >= 900 ? Hh * 0.52 : Hh * 0.44;
     }
     var cy, sy_, cp, sp_;
     function setM() { cy = Math.cos(cam.yaw); sy_ = Math.sin(cam.yaw); cp = Math.cos(cam.pitch); sp_ = Math.sin(cam.pitch); }
@@ -153,18 +153,18 @@
       ];
     }
     var cpos;
-    function drawBox(x0, x1, y0, y1, z0, z1, color, alpha, o) {
+    function drawBox(x0, x1, y0, y1, z0, z1, color, alpha, o, noCull) {
       o = o || {};
       var faces = boxFaces(x0, x1, y0, y1, z0, z1), cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2, cz = (z0 + z1) / 2, list = [];
       faces.forEach(function (f) {
         var fc = [0, 0, 0];
         f.p.forEach(function (q) { fc[0] += q[0] / 4; fc[1] += q[1] / 4; fc[2] += q[2] / 4; });
         var vx = cpos.x - fc[0], vy = cpos.y - fc[1], vz = cpos.z - fc[2];
-        if (f.n[0] * vx + f.n[1] * vy + f.n[2] * vz <= 0) return;
+        if (!noCull && f.n[0] * vx + f.n[1] * vy + f.n[2] * vz <= 0) return;
         var pp = f.p.map(function (q) { return proj(q[0], q[1], q[2]); });
         var d = (pp[0].d + pp[1].d + pp[2].d + pp[3].d) / 4;
         var lam = Math.max(0, f.n[0] * LIGHT[0] + f.n[1] * LIGHT[1] + f.n[2] * LIGHT[2]);
-        list.push({ pp: pp, d: d, f: 0.62 + 0.45 * lam, top: f.n[1] === 1 });
+        list.push({ pp: pp, d: d, f: 0.62 + 0.45 * lam, top: f.n[1] === 1, face: f });
       });
       list.sort(function (a, b) { return b.d - a.d; });
       list.forEach(function (it) {
@@ -179,10 +179,22 @@
         ctx.strokeStyle = o.stroke || 'rgba(8,30,66,.55)';
         ctx.lineWidth = o.lw || 1;
         ctx.stroke();
+        if (o.windows && !it.top) windows(it.face, alpha, it.f);
         if (o.room && it.top) hits.push({ poly: it.pp, room: o.room });
       });
       ctx.globalAlpha = 1;
       return proj(cx, y1, cz);
+    }
+    function windows(face, alpha, f) {
+      var P0 = face.p[0], P1 = face.p[1], P3 = face.p[3];
+      var w = Math.hypot(P1[0] - P0[0], P1[2] - P0[2]), N = Math.max(1, Math.round(w / 2.3));
+      function pt(u, v) { return proj(P0[0] + (P1[0] - P0[0]) * u + (P3[0] - P0[0]) * v, P0[1] + (P3[1] - P0[1]) * v, P0[2] + (P1[2] - P0[2]) * u + (P3[2] - P0[2]) * v); }
+      ctx.globalAlpha = Math.min(1, alpha); ctx.fillStyle = shade('#bfe3ff', f);
+      for (var i = 0; i < N; i++) {
+        var u0 = (i + 0.22) / N, u1 = (i + 0.78) / N, a = pt(u0, 0.3), b = pt(u1, 0.3), c = pt(u1, 0.72), d = pt(u0, 0.72);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
     function flat(x0, x1, z0, z1, y, color, alpha) {
       var pp = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(function (q) { return proj(q[0], y, q[1]); });
@@ -218,33 +230,104 @@
     }
 
     /* ===== 5. the scene ===== */
+    function rnd(seed) { var x = Math.sin(seed * 127.1) * 43758.5453; return x - Math.floor(x); }
+    var TREES = (function () {
+      var out = [], id = 1;
+      function scatter(x0, x1, z0, z1, n) { for (var i = 0; i < n; i++) { id++; out.push({ x: x0 + rnd(id) * (x1 - x0), z: z0 + rnd(id + 99) * (z1 - z0), h: 3.6 + rnd(id + 7) * 2.6, pine: rnd(id + 3) > 0.7, c: Math.floor(rnd(id + 11) * 4) }); } }
+      scatter(-3, 4.2, 22, 60, 7);        // west edge
+      scatter(9.5, 25.5, 43, 46.5, 6);       // Serenity Garden
+      scatter(30, 52, 52.5, 56, 8);         // Centennial Park
+      scatter(2, 86, 14.5, 20, 16);        // behind the buildings
+      scatter(77, 88, 20, 62, 9);         // east side / North Park
+      scatter(56, 76, 53, 60, 6);
+      [[30.8, 38.6], [72.2, 38.6], [72.2, 33.8]].forEach(function (p) { id++; out.push({ x: p[0], z: p[1], h: 4.5, pine: false, c: 1 }); });
+      return out;
+    })();
+    var CANOPY = ['#2f8f46', '#3aa655', '#287a3c', '#4db35f'];
+    function drawTree(t) {
+      var base = proj(t.x, 0, t.z), mid = proj(t.x, t.h * 0.45, t.z), top = proj(t.x, t.h, t.z);
+      var r = FOV * (t.h * 0.30) / base.d, rt = r;
+      ctx.beginPath(); ctx.ellipse(base.x + r * 0.3, base.y, r * 0.9, r * 0.32, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(mid.x, mid.y); ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = Math.max(1.5, r * 0.28); ctx.stroke();
+      var col = CANOPY[t.c];
+      if (t.pine) {
+        var ap = proj(t.x, t.h * 1.12, t.z), bs = proj(t.x, t.h * 0.3, t.z);
+        ctx.beginPath(); ctx.moveTo(ap.x, ap.y); ctx.lineTo(bs.x + r * 0.95, bs.y); ctx.lineTo(bs.x - r * 0.95, bs.y); ctx.closePath();
+        ctx.fillStyle = '#1f6b3a'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; ctx.stroke();
+      } else {
+        var cy_ = (mid.y + top.y) / 2 - r * 0.15;
+        var gr = ctx.createRadialGradient(top.x - r * 0.3, cy_ - r * 0.4, r * 0.1, top.x, cy_, r * 1.1);
+        gr.addColorStop(0, '#8fdc8a'); gr.addColorStop(0.45, col); gr.addColorStop(1, '#1d5e31');
+        ctx.beginPath(); ctx.arc(top.x, cy_, r * 1.05, 0, 7); ctx.fillStyle = gr; ctx.fill();
+      }
+    }
+    function roadSeg(x0, z0, x1, z1, w) {          // flat road strip between two points (axis aligned)
+      var h = w / 2;
+      if (x0 === x1) flat(x0 - h, x0 + h, Math.min(z0, z1) - h, Math.max(z0, z1) + h, 0.05, '#4b5563');
+      else flat(Math.min(x0, x1) - h, Math.max(x0, x1) + h, z0 - h, z0 + h, 0.05, '#4b5563');
+    }
     function drawGround() {
-      flat(-10, 100, 10, 80, 0, '#9bc58a');
-      // greens
-      flat(12, 26, 41, 46, 0.02, '#8ad06a'); flat(74, 82, 36, 44, 0.02, '#8ad06a'); flat(30, 52, 51, 55, 0.02, '#8ad06a'); flat(62, 72, 51, 55, 0.02, '#4a90e2');
-      // road (dark): gate -> up the left -> east along the front
-      flatPoly([[5.2, 58], [8.8, 58], [8.8, 33], [74, 33], [74, 36], [5.2, 36]], 0.04, '#4b5563');
-      stroke3([[7, 58], [7, 34.5], [74, 34.5]], 'rgba(255,255,255,.6)', 1.2, 0.06);
-      // walkways (light)
-      flat(54.4, 57, 34.5, 40, 0.05, '#e5e7eb');
-      flat(26, 56, 38.4, 40, 0.05, '#e5e7eb');
-      flat(26, 28, 34, 40, 0.05, '#e5e7eb');
+      // island base
+      drawBox(-6, 92, -2.2, 0, 11, 65, '#8b6b4a', 1, { stroke: 'rgba(0,0,0,.25)' });
+      flat(-6, 92, 11, 65, 0, '#9cc98a');
+      // lawn stripes
+      for (var i = 0; i < 12; i++) flat(-6, 92, 11 + i * 4.5, 13.2 + i * 4.5, 0.01, '#94c382', 0.55);
+      // parks / gardens
+      flat(9, 26.5, 41.8, 47, 0.03, '#7fcf6a'); flat(76.5, 90, 36, 45, 0.03, '#7fcf6a'); flat(29.5, 53, 51.6, 56.2, 0.03, '#7fcf6a');
+      flat(62, 72, 52.5, 56.5, 0.04, '#5b8fd6');
+      // shadows of the buildings
+      ORDER.forEach(function (bk) { var g = G[bk], hh = floorsOf(bk).length * H; flat(g.x0 + 1.2, g.x1 + 0.8 + hh * 0.25, g.z0 + 1, g.z1 + 1 + hh * 0.3, 0.04, '#000', 0.16); });
+      // ring road (as on the university map): gate -> west pocket -> north -> east -> south -> back to the quadrangle
+      roadSeg(7, 62, 7, 34.5, 3);
+      roadSeg(7, 34.5, 28, 34.5, 3);
+      roadSeg(28, 22, 28, 50, 2.8);
+      roadSeg(28, 22, 75, 22, 2.8);
+      roadSeg(75, 22, 75, 50, 2.8);
+      roadSeg(28, 50, 75, 50, 2.8);
+      [[[7, 62], [7, 34.5], [28, 34.5]], [[28, 22], [75, 22], [75, 50], [28, 50], [28, 22]]].forEach(function (p) {
+        ctx.setLineDash([6, 6]); stroke3(p, 'rgba(255,255,255,.75)', 1.2, 0.06); ctx.setLineDash([]);
+      });
+      // the QUADRANGLE: paved open space between the Main/Admin row and the RLRC
+      flat(29.4, 73.6, 32.5, 40, 0.06, '#e6dcc3');
+      ctx.strokeStyle = 'rgba(120,100,60,.28)'; ctx.lineWidth = 1;
+      for (var x = 29.4; x <= 73.7; x += 4.43) { var p1 = proj(x, 0.07, 32.5), p2 = proj(x, 0.07, 40); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+      for (var z = 32.5; z <= 40.1; z += 1.9) { var q1 = proj(29.4, 0.07, z), q2 = proj(73.6, 0.07, z); ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.stroke(); }
+      // the walkway to the RLRC through the gap between Main and Admin
+      flat(54.2, 56.8, 32.5, 40, 0.08, '#f3efe3');
+      // fountain
+      var fc = [45, 36.3], ring = [], ring2 = [];
+      for (var k = 0; k < 24; k++) { var an = k / 24 * 6.2832; ring.push([fc[0] + Math.cos(an) * 2.6, fc[1] + Math.sin(an) * 2.6]); ring2.push([fc[0] + Math.cos(an) * 2.0, fc[1] + Math.sin(an) * 2.0]); }
+      flatPoly(ring, 0.35, '#cbd5e1'); flatPoly(ring2, 0.4, '#7cc4ec');
+      // benches
+      [[36, 39.2], [41, 39.2], [50, 39.2], [62, 39.2], [66, 33.4]].forEach(function (p) { drawBox(p[0] - 0.9, p[0] + 0.9, 0.0, 0.6, p[1] - 0.3, p[1] + 0.3, '#8b5a2b', 1); });
+      // flag pole
+      var fb = proj(66.5, 0.1, 36.3), ft = proj(66.5, 10, 36.3), fl = proj(68.3, 9.2, 36.3), fl2 = proj(68.3, 8, 36.3), fl3 = proj(66.5, 8, 36.3);
+      ctx.beginPath(); ctx.moveTo(fb.x, fb.y); ctx.lineTo(ft.x, ft.y); ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ft.x, ft.y); ctx.lineTo(fl.x, fl.y); ctx.lineTo(fl2.x, fl2.y); ctx.lineTo(fl3.x, fl3.y); ctx.closePath(); ctx.fillStyle = '#c0392b'; ctx.fill();
+      var qp = proj(58, 0.1, 36.3); labels.push({ t: 'Quadrangle', x: qp.x, y: qp.y, s: 12, c: '#5b4a22', bg: 'rgba(255,255,255,.7)' });
+      var sp = proj(17, 0.1, 44.5); labels.push({ t: 'Serenity Garden', x: sp.x, y: sp.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
+      var cp2 = proj(41, 0.1, 54); labels.push({ t: 'Centennial Park', x: cp2.x, y: cp2.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
+      var np = proj(83, 0.1, 40.5); labels.push({ t: 'North Park', x: np.x, y: np.y, s: 10, c: '#fff', bg: 'rgba(21,94,47,.8)' });
     }
-    function drawProps() {
-      // gate
-      var g1 = proj(GATE.x - 2.4, 0, GATE.z), g2 = proj(GATE.x + 2.4, 0, GATE.z);
-      drawBox(GATE.x - 3.2, GATE.x - 2.4, 0, 3.4, GATE.z - .4, GATE.z + .4, '#e5e7eb', 1);
-      drawBox(GATE.x + 2.4, GATE.x + 3.2, 0, 3.4, GATE.z - .4, GATE.z + .4, '#e5e7eb', 1);
-      var gp = proj(GATE.x, 4.8, GATE.z); labels.push({ t: 'Main Gate', x: gp.x, y: gp.y, s: 12, c: '#fff', bg: 'rgba(8,30,66,.8)' });
-      // covered court
-      var cp_ = drawBox(12, 25, 0, 4, 36, 41, '#f4b740', 1);
-      labels.push({ t: 'Covered Court / Gym', x: cp_.x, y: cp_.y - 12, s: 11, c: '#fff', bg: 'rgba(8,30,66,.8)' });
-      // gazebo
-      var gz = drawBox(30.5, 34.5, 0, 2.6, 41, 45, '#d6a96a', 1);
-      labels.push({ t: 'Gazebo', x: gz.x, y: gz.y - 10, s: 10, c: '#fff', bg: 'rgba(8,30,66,.7)' });
-      // elevator / entrance strip between Main and Admin
-      var s = drawBox(54, 57, 0, 5 * H, 24, 32.5, '#9ca3af', route ? .25 : .9);
+    function drawGate() {
+      drawBox(GATE.x - 3.4, GATE.x - 2.6, 0, 4, GATE.z - .5, GATE.z + .5, '#f1f5f9', 1);
+      drawBox(GATE.x + 2.6, GATE.x + 3.4, 0, 4, GATE.z - .5, GATE.z + .5, '#f1f5f9', 1);
+      drawBox(GATE.x - 3.4, GATE.x + 3.4, 3.4, 4.2, GATE.z - .5, GATE.z + .5, '#1f7a46', 1);
+      var gp = proj(GATE.x, 5.8, GATE.z); labels.push({ t: 'Main Gate', x: gp.x, y: gp.y, s: 12, c: '#fff', bg: 'rgba(8,30,66,.85)' });
     }
+    function drawCourt() {
+      var p = drawBox(12, 25, 0, 0.5, 36, 41, '#c98a2b', 1);
+      drawBox(12.4, 24.6, 0.5, 4.2, 36.4, 40.6, '#f4b740', 1, { stroke: 'rgba(8,30,66,.5)' });
+      drawBox(11.8, 25.2, 4.2, 4.7, 35.8, 41.2, '#b45309', 1);
+      labels.push({ t: 'Covered Court / Gym', x: p.x, y: p.y - 22, s: 11, c: '#fff', bg: 'rgba(8,30,66,.85)' });
+    }
+    function drawGazebo() {
+      var gz = drawBox(30.8, 34.2, 0, 0.5, 41.3, 44.7, '#d6c9a8', 1);
+      [[31.1, 41.6], [33.5, 41.6], [31.1, 44.0], [33.5, 44.0]].forEach(function (q) { drawBox(q[0], q[0] + 0.45, 0.5, 3, q[1], q[1] + 0.45, '#8b5a2b', 1); });
+      drawBox(30.4, 34.6, 3, 3.9, 40.9, 45.1, '#a8442f', 1);
+      labels.push({ t: 'Gazebo', x: gz.x, y: gz.y - 28, s: 10, c: '#fff', bg: 'rgba(8,30,66,.8)' });
+    }
+    function drawStrip() { drawBox(54, 57, 0, 5 * H, 24, 32.5, '#aab2bd', route ? .25 : .95, { windows: !route }); }
 
     function drawBuilding(bk) {
       var g = G[bk], fl = floorsOf(bk), top = null;
@@ -256,8 +339,9 @@
           drawBox(g.x0, g.x1, y0, y0 + 0.3, g.z0, g.z1, '#e8e4d8', 1, { stroke: 'rgba(8,30,66,.5)' });
           drawRooms(bk, f, y0 + 0.3);
         } else {
-          var p = drawBox(g.x0, g.x1, y0, y1, g.z0, g.z1, g.color, alpha, { stroke: m === 'solid' ? 'rgba(8,30,66,.5)' : 'rgba(255,255,255,.35)' });
+          var p = drawBox(g.x0, g.x1, y0, y1, g.z0, g.z1, g.color, alpha, { stroke: m === 'solid' ? 'rgba(8,30,66,.5)' : 'rgba(255,255,255,.35)', windows: m === 'solid' });
           top = p;
+          if (m === 'solid' && f === fl[fl.length - 1]) drawBox(g.x0 - 0.25, g.x1 + 0.25, y1, y1 + 0.35, g.z0 - 0.25, g.z1 + 0.25, '#59606b', 1);
         }
       });
       if (top && !route) labels.push({ t: g.label, x: top.x, y: top.y - 14, s: 13, c: '#081e42', bg: 'rgba(253,224,71,.95)' });
@@ -436,10 +520,15 @@
       var sky = ctx.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, '#0b2a5b'); sky.addColorStop(1, '#2a5fa8');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, Hh);
       hits = []; labels = [];
-      drawGround(); drawProps();
-      ORDER.map(function (bk) { var g = G[bk]; return { bk: bk, d: proj((g.x0 + g.x1) / 2, 0, (g.z0 + g.z1) / 2).d }; })
-        .sort(function (a, b) { return b.d - a.d; })
-        .forEach(function (o) { drawBuilding(o.bk); });
+      drawGround();
+      var items = [];
+      ORDER.forEach(function (bk) { var g = G[bk]; items.push({ d: proj((g.x0 + g.x1) / 2, 0, (g.z0 + g.z1) / 2).d, f: function () { drawBuilding(bk); } }); });
+      items.push({ d: proj(55.5, 0, 28).d, f: drawStrip });
+      items.push({ d: proj(GATE.x, 0, GATE.z).d, f: drawGate });
+      items.push({ d: proj(18.5, 0, 38.5).d, f: drawCourt });
+      items.push({ d: proj(32.5, 0, 43).d, f: drawGazebo });
+      TREES.forEach(function (t) { items.push({ d: proj(t.x, 0, t.z).d, f: function () { drawTree(t); } }); });
+      items.sort(function (a, b) { return b.d - a.d; }).forEach(function (it) { it.f(); });
       drawRoute(Date.now() - t0);
       labels.forEach(function (l) { text(l.t, l.x, l.y, l.s, l.c, l.bg); });
       requestAnimationFrame(frame);
@@ -519,7 +608,7 @@
     }
     function setFocus(k) {
       focus = k; floorSel = null; route = null; $('steps').innerHTML = ''; $('info').style.display = 'none'; selRoom = null; chips();
-      if (!k) fly({ tx: 40, tz: 38, dist: 150, yaw: 0.35, pitch: 0.75 });
+      if (!k) fly({ tx: 43, tz: 38, dist: 128, yaw: 0.25, pitch: 1.0 });
       else { var g = G[k]; fly({ tx: (g.x0 + g.x1) / 2, ty: 3, tz: (g.z0 + g.z1) / 2, dist: Math.max(34, (g.x1 - g.x0) * 1.5), yaw: 0.2, pitch: 0.95 }); }
     }
     function fill(sel) {
@@ -544,7 +633,7 @@
       var minx = 1e9, maxx = -1e9, minz = 1e9, maxz = -1e9;
       route.forEach(function (p) { minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); minz = Math.min(minz, p.z); maxz = Math.max(maxz, p.z); });
       var span = Math.max(maxx - minx, (maxz - minz) * 1.4, 22);
-      fly({ tx: (minx + maxx) / 2, ty: 3, tz: (minz + maxz) / 2, dist: Math.min(240, span * (W < 700 ? 2.7 : 1.9) + 20), pitch: 0.9 });
+      fly({ tx: (minx + maxx) / 2 + (W >= 900 ? span * 0.22 : 0), ty: 3, tz: (minz + maxz) / 2, dist: Math.min(240, span * (W < 700 ? 2.7 : 1.9) + 20), pitch: 0.9 });
       $('gstate').textContent = 'tap to hide';
     }
     $('go').onclick = showRoute;
