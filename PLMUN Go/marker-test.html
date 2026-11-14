@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Marker Test | PLMUN Go</title>
+  <link rel="icon" type="image/png" href="images/plmunlogo.png">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #e5e7eb; font-family: Poppins, Arial, sans-serif; color: #081e42; display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 12px; }
+    h1 { font-size: 1.2rem; margin: 4px 0 0; text-align: center; }
+    p { margin: 0; font-size: .85rem; text-align: center; max-width: 520px; }
+    .bar { display: flex; gap: 8px; width: 100%; max-width: 520px; }
+    select { flex: 1; min-width: 0; padding: 10px; border-radius: 10px; border: 1px solid #94a3b8; font-size: .95rem; }
+    button { border: 0; background: #081e42; color: #fff; border-radius: 10px; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+    .stage { background: #fff; padding: 0; border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.18); line-height: 0; }
+    canvas { width: min(86vw, 62vh, 520px); height: auto; display: block; image-rendering: pixelated; }
+    .id { font-weight: 700; }
+    a { color: #0b3b8c; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <h1>AR marker test</h1>
+  <p>Show a marker on this screen, open <b>ar.html</b> on your phone, tap <b>Start camera</b> and point it here. Keep the whole white square in view and set the screen brightness high.</p>
+  <div class="bar"><button id="prev">◀</button><select id="sel"></select><button id="next">▶</button></div>
+  <div class="stage"><canvas id="c"></canvas></div>
+  <p>Marker <span class="id" id="mid"></span> · <span id="mname"></span></p>
+  <a href="ar.html">Open the AR guide</a>
+  <script src="markers.js"></script>
+  <script>
+    var M = window.PLMUN_MARKERS, sel = document.getElementById('sel'), cv = document.getElementById('c'), ctx = cv.getContext('2d');
+    var CELL = 60, N = 5, SIDE = (N + 2 + 2) * CELL;          // 7x7 cells + 1 white cell of margin all round
+    cv.width = SIDE; cv.height = SIDE;
+    M.rooms.forEach(function (k, i) { var p = k.split('|'); var o = document.createElement('option'); o.value = i; o.textContent = i + ' · ' + p[2] + ' (' + p[0] + ' ' + p[1] + 'F)'; sel.appendChild(o); });
+    function draw(id) {
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, SIDE, SIDE);
+      ctx.fillStyle = '#000'; ctx.fillRect(CELL, CELL, (N + 2) * CELL, (N + 2) * CELL);
+      var code = M.codes[id], k;
+      ctx.fillStyle = '#fff';
+      for (k = 0; k < N * N; k++) {
+        if ((code >>> (N * N - 1 - k)) & 1) ctx.fillRect((2 + (k % N)) * CELL, (2 + Math.floor(k / N)) * CELL, CELL, CELL);
+      }
+      document.getElementById('mid').textContent = id;
+      document.getElementById('mname').textContent = M.rooms[id].split('|')[2];
+      sel.value = id;
+    }
+    function go(d) { draw((Number(sel.value) + d + M.rooms.length) % M.rooms.length); }
+    sel.addEventListener('change', function () { draw(Number(sel.value)); });
+    document.getElementById('prev').onclick = function () { go(-1); };
+    document.getElementById('next').onclick = function () { go(1); };
+    var q = new URLSearchParams(location.search).get('id');
+    draw(q ? Number(q) : 0);
+  </script>
+</body>
+</html>

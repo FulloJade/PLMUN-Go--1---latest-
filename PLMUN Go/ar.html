@@ -18,6 +18,7 @@
     .btn.ghost { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.5); }
     .back { color: #bfdbfe; font-size: .9rem; text-decoration: none; margin-top: 6px; }
 
+    #ovl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; display: none; }
     /* ---------- camera view ---------- */
     #cam { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
     #hud { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column; justify-content: space-between;
@@ -77,13 +78,14 @@
   <!-- START -->
   <div id="start">
     <h1>📍 PLMUN Go · AR Guide</h1>
-    <p>Point your phone camera at a PLMUN Go QR code posted on campus. The guide shows an arrow and the next step on top of what you see.</p>
+    <p>Point your phone camera at the PLMUN Go marker (the black-and-white square) or QR code posted on campus. The guide locks onto it and shows an arrow and the next step on top of what you see.</p>
     <button class="btn" id="start-btn">Start camera</button>
     <button class="btn ghost" id="nocam-btn">Continue without camera</button>
     <a class="back" href="index.html">← Back to the website</a>
   </div>
 
   <video id="cam" autoplay playsinline muted></video>
+  <canvas id="ovl"></canvas>
 
   <!-- AR OVERLAY -->
   <div id="hud">
@@ -93,7 +95,7 @@
       <button class="round" id="close" aria-label="Close">✕</button>
     </div>
 
-    <div id="reticle"><span>Scan a PLMUN Go QR code</span></div>
+    <div id="reticle"><span>Point at a PLMUN Go marker or QR code</span></div>
 
     <div id="arrow-stage">
       <div id="arrow" class="up">
@@ -110,6 +112,8 @@
 
   <!-- The campus layout + route engine (shared with the Directions panel on the home page) -->
   <script src="routes.js"></script>
+  <script src="markers.js"></script>
+  <script src="aruco.js"></script>
 
   <script>
   /* =========================================================================
@@ -136,7 +140,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var video = $('cam'), hud = $('hud'), card = $('card'), reticle = $('reticle');
     var arrowStage = $('arrow-stage'), arrow = $('arrow');
-    var here = null, dest = null, steps = [], stepIdx = 0, stream = null, scanTimer = null, voiceOn = true, detector = null;
+    var here = null, dest = null, steps = [], stepIdx = 0, stream = null, scanTimer = null, voiceOn = true, detector = null, camOn = false, curDir = null, curText = '';
 
     var L = window.PLMunLayout, ROOMS = L.ROOMS, BY_KEY = L.BY_KEY, ORD = L.ORD;
     function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -152,7 +156,11 @@
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));
     }
-    function setArrow(dir) { arrow.className = dir || 'up'; arrowStage.classList.add('on'); }
+    function setArrow(dir, text) {
+      curDir = dir || 'up'; curText = text || '';
+      if (camOn) { arrowStage.classList.remove('on'); return; }      // with the camera on, the arrow is drawn on the marker
+      arrow.className = curDir; arrowStage.classList.add('on');
+    }
 
     /* ---------------- a searchable list of rooms ---------------- */
     function picker(title, hint, onPick, extraHtml) {
@@ -180,10 +188,10 @@
     /* ---------------- screens ---------------- */
     function render() {
       $('here-name').textContent = here ? here.name : 'Not set: scan a QR code';
-      var scanning = !!detector;
+      var scanning = camOn;
 
       if (!here) {
-        arrowStage.classList.remove('on');
+        arrowStage.classList.remove('on'); curDir = null;
         reticle.classList.toggle('on', scanning);
         picker('Where are you?', scanning ? 'Point the camera at a PLMUN Go QR code, or search your spot:' : 'Search the room you are closest to:', setHere);
         return;
@@ -191,14 +199,14 @@
       reticle.classList.toggle('on', scanning && !dest);
 
       if (!dest) {
-        arrowStage.classList.remove('on');
+        arrowStage.classList.remove('on'); curDir = null;
         picker('Where do you want to go?', 'From <b>' + esc(here.name) + '</b> (' + esc(here.where) + ')', setDest,
           '<p class="note" style="margin-top:-4px">Tip: scan the next QR code on your way and the guide continues by itself.</p>');
         return;
       }
 
       if (here.key === dest.key) {
-        setArrow('arrive');
+        setArrow('arrive', '');
         card.innerHTML = '<h3>You have arrived! 🎉</h3><p>' + esc(dest.name) + '<br><small>' + esc(dest.where) + '</small></p><div class="row"><button class="btn" id="again">Find another place</button></div>';
         $('again').addEventListener('click', function () { dest = null; steps = []; render(); });
         speak('You have arrived at ' + dest.name);
@@ -206,7 +214,7 @@
       }
 
       var st = steps[Math.min(stepIdx, steps.length - 1)];
-      setArrow(st.dir);
+      setArrow(st.dir, st.text);
       var last = stepIdx >= steps.length - 1;
       var photo = st.photo || (last ? 'images/rooms/' + dest.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.jpg' : '');
       card.innerHTML =
@@ -247,6 +255,7 @@
       return text && text.length < 90 ? findRoom(text) : null;
     }
     function startScan() {
+      startMarkers();
       if (!('BarcodeDetector' in window)) return;
       try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; return; }
       var busy = false, lastSeen = '';
@@ -262,6 +271,112 @@
       }, 450);
     }
 
+    /* ---------------- marker tracking: the arrow is glued to the printed marker ---------------- */
+    var markerTimer = null, mdet = null, grab = null, gctx = null, ovl = $('ovl'), octx = ovl.getContext('2d');
+    var track = null;             // { id, corners:[{x,y}] on screen, t }
+    var seenId = -1, seenN = 0;
+    var MK = window.PLMUN_MARKERS;
+
+    function sizeOverlay() {
+      var d = window.devicePixelRatio || 1;
+      ovl.width = Math.round(window.innerWidth * d); ovl.height = Math.round(window.innerHeight * d);
+      octx.setTransform(d, 0, 0, d, 0, 0);
+    }
+    function videoToScreen(p, sc, vw, vh) {      // the <video> is object-fit: cover
+      var s = Math.max(window.innerWidth / vw, window.innerHeight / vh);
+      return { x: (p.x / sc) * s + (window.innerWidth - vw * s) / 2, y: (p.y / sc) * s + (window.innerHeight - vh * s) / 2 };
+    }
+    function markerStep() {
+      if (!camOn || video.readyState < 2 || !video.videoWidth || !mdet) return;
+      var vw = video.videoWidth, vh = video.videoHeight, sc = Math.min(1, 640 / vw);
+      var w = Math.round(vw * sc), h = Math.round(vh * sc);
+      if (!grab) { grab = document.createElement('canvas'); gctx = grab.getContext('2d', { willReadFrequently: true }); }
+      if (grab.width !== w || grab.height !== h) { grab.width = w; grab.height = h; }
+      gctx.drawImage(video, 0, 0, w, h);
+      var found = mdet.detect(gctx.getImageData(0, 0, w, h)), best = null;
+      found.forEach(function (f) { if (MK.rooms[f.id] && (!best || f.err < best.err)) best = f; });
+      var now = Date.now();
+      if (!best) { if (track && now - track.t > 700) track = null; return; }
+      var cs = best.corners.map(function (c) { return videoToScreen(c, sc, vw, vh); });
+      if (track && track.id === best.id && now - track.t < 700) {          // smooth the jitter
+        cs = cs.map(function (c, i) { return { x: track.corners[i].x * 0.3 + c.x * 0.7, y: track.corners[i].y * 0.3 + c.y * 0.7 }; });
+      }
+      track = { id: best.id, corners: cs, t: now };
+      if (best.id === seenId) seenN++; else { seenId = best.id; seenN = 1; }
+      var room = BY_KEY[MK.rooms[best.id]];
+      if (room && seenN >= 2 && (!here || here.key !== room.key)) setHere(room);
+    }
+
+    /* ---- drawing in marker coordinates: (0,0)=marker top-left, (1,1)=bottom-right, y points DOWN ---- */
+    var MS = window.PLMunMarker;
+    function rot(p, a) { var c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
+    function ribbon(pts, wd) {                      // a thick line as a polygon
+      var L = [], R = [], i;
+      for (i = 0; i < pts.length; i++) {
+        var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+        L.push([pts[i][0] - dy / n * wd, pts[i][1] + dx / n * wd]); R.push([pts[i][0] + dy / n * wd, pts[i][1] - dx / n * wd]);
+      }
+      return L.concat(R.reverse());
+    }
+    var UP = [[0, -.5], [.42, -.02], [.17, -.02], [.17, .5], [-.17, .5], [-.17, -.02], [-.42, -.02]];
+    function glyph(dir, text) {                      // returns [{pts, fill}] in centred unit coords (marker side = 1)
+      var vertical = /^go (up|down)/i.test(text || '');
+      if (dir === 'arrive') {
+        var ring = [], k; for (k = 0; k <= 24; k++) ring.push([Math.cos(k / 24 * 6.2832) * .42, Math.sin(k / 24 * 6.2832) * .42]);
+        return [{ pts: ribbon(ring, .07), fill: '#22c55e' }, { pts: ribbon([[-.2, .02], [-.05, .17], [.22, -.16]], .07), fill: '#22c55e' }];
+      }
+      if (vertical) {
+        var up = dir === 'up', st = [[-.5, .5], [-.5, .22], [-.17, .22], [-.17, -.03], [.17, -.03], [.17, -.28], [.5, -.28], [.5, .5]];
+        if (!up) st = st.map(function (p) { return [-p[0], p[1]]; });
+        var ar = UP.map(function (p) { var q = rot([p[0] * .62, p[1] * .62], up ? 0 : Math.PI); return [q[0] + (up ? -.28 : .28), q[1] - .3]; });
+        return [{ pts: st, fill: '#fde047' }, { pts: ar, fill: '#ffffff' }];
+      }
+      if (dir === 'down') {                         // turn around (U-turn)
+        var u = [[.26, .46], [.26, -.02]], j; for (j = 0; j <= 10; j++) { var an = j / 10 * Math.PI; u.push([Math.cos(an) * .26, -.02 - Math.sin(an) * .26]); }
+        u.push([-.26, .26]);
+        return [{ pts: ribbon(u, .085), fill: '#fde047' }, { pts: [[-.5, .22], [-.02, .22], [-.26, .5]].map(function (p) { return [p[0] + 0, p[1]]; }), fill: '#fde047' }];
+      }
+      var a = dir === 'left' ? -Math.PI / 2 : dir === 'right' ? Math.PI / 2 : 0;
+      return [{ pts: UP.map(function (p) { return rot(p, a); }), fill: '#fde047' }];
+    }
+    window.PLMunGlyph = glyph;
+    function drawOverlay() {
+      requestAnimationFrame(drawOverlay);
+      octx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      if (!camOn || !track || Date.now() - track.t > 600) return;
+      var H = MS.squareToQuad(track.corners), cs = track.corners, pulse = 1 + Math.sin(Date.now() / 260) * 0.05;
+      function P(u, v) { return MS.applyH(H, u, v); }
+      // outline: "locked on"
+      octx.lineWidth = 3; octx.strokeStyle = '#fde047'; octx.beginPath();
+      cs.forEach(function (c, i) { if (i) octx.lineTo(c.x, c.y); else octx.moveTo(c.x, c.y); }); octx.closePath(); octx.stroke();
+      var room = BY_KEY[MK.rooms[track.id]];
+      var c0 = P(.5, .5), top = P(.5, 0);
+      // little tag above the marker
+      var tx = top.x, ty = Math.max(24, top.y - 14);
+      octx.font = '600 13px Poppins, Arial, sans-serif'; octx.textAlign = 'center';
+      var label = room ? room.name : 'Marker', tw = octx.measureText(label).width + 20;
+      octx.fillStyle = 'rgba(8,30,66,.88)'; octx.beginPath(); octx.roundRect ? octx.roundRect(tx - tw / 2, ty - 15, tw, 24, 12) : octx.rect(tx - tw / 2, ty - 15, tw, 24); octx.fill();
+      octx.fillStyle = '#fde047'; octx.fillText(label, tx, ty + 2);
+      if (!dest || !curDir) return;
+      var sz = 1.25 * pulse;
+      glyph(curDir, curText).forEach(function (g) {
+        [[0.045, 0.06, 'rgba(0,0,0,.35)'], [0, 0, g.fill]].forEach(function (pass, k) {
+          octx.beginPath();
+          g.pts.forEach(function (p, i) { var q = P(.5 + p[0] * sz + pass[0], .5 + p[1] * sz + pass[1]); if (i) octx.lineTo(q.x, q.y); else octx.moveTo(q.x, q.y); });
+          octx.closePath(); octx.fillStyle = pass[2]; octx.fill();
+          if (k) { octx.lineWidth = 3; octx.strokeStyle = '#081e42'; octx.lineJoin = 'round'; octx.stroke(); }
+        });
+      });
+    }
+    function startMarkers() {
+      if (!MK || !MS || !MK.codes) return;
+      mdet = new MS.Detector(MK.codes, MK.rooms.length);
+      sizeOverlay(); ovl.style.display = 'block';
+      window.addEventListener('resize', sizeOverlay);
+      markerTimer = setInterval(function () { try { markerStep(); } catch (e) { } }, 90);
+      requestAnimationFrame(drawOverlay);
+    }
+
     /* ---------------- start / stop ---------------- */
     function open(withCamera) {
       $('start').style.display = 'none';
@@ -270,6 +385,7 @@
       if (p.get('at')) here = findRoom(p.get('at'), p.get('b'), p.get('f'));
       if (!here) { try { var k = localStorage.getItem('plmun-here-key'); if (k) here = BY_KEY[k] || null; } catch (e) { } }
       if (!withCamera) { video.style.display = 'none'; document.body.style.background = 'linear-gradient(160deg,#081e42,#0b3b8c)'; }
+      camOn = !!withCamera;
       if (withCamera) startScan();
       render();
     }
@@ -283,6 +399,7 @@
     $('nocam-btn').addEventListener('click', function () { open(false); });
     $('close').addEventListener('click', function () {
       if (scanTimer) clearInterval(scanTimer);
+      if (markerTimer) clearInterval(markerTimer);
       if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       window.location.href = SITE_HOME;
