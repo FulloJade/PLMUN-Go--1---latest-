@@ -5160,3 +5160,41 @@ body.campuslife-page {
   }
 }
  
+/* ===== "Explore Map in 3D" button sitting on the map photo ===== */
+.map-3d-fab {
+  position: absolute;
+  right: 3%;
+  bottom: 5%;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: #fde047;
+  color: #081e42;
+  font-weight: 800;
+  font-size: 1rem;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+ 
+.map-3d-fab:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+ 
+@media (max-width: 640px) {
+  .map-3d-fab {
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    right: 3%;
+    bottom: 4%;
+  }
+}
+ 
+NOTE: keep or delete the banner under the map - the two buttons don't affect each other,
+so your groupmates can vote and you just delete the one nobody picks.
+ 
