@@ -9,7 +9,7 @@
   <meta property="og:image" content="https://plmun-go.plmungo081028.workers.dev/images/admin.png">
   <meta property="og:url" content="https://plmun-go.plmungo081028.workers.dev/">
   <meta name="twitter:card" content="summary_large_image">
-  <title>PLMUN GO</title>
+  <title>PLMUN Go</title>
   <link rel="stylesheet" href="style.css">
      <link rel="icon" type="image/png" href="images/plmunlogo.png">
   <!-- FontAwesome Icons -->
@@ -50,7 +50,7 @@
           <p>Learn, Connect, and Grow at Pamantasan ng Lungsod ng Muntinlupa</p>
           
           <div class="home-hero-actions">
-            <a href="#ask" class="hero-btn primary"><i class="fa-solid fa-robot"></i> Ask PLMun Go</a>
+            <a href="#ask" class="hero-btn primary"><i class="fa-solid fa-robot"></i> Ask PLMUN Go</a>
             <a href="#campus-map" class="hero-btn ghost"><i class="fa-solid fa-map-location-dot"></i> Campus Map</a>
             <a href="ar.html" class="hero-btn ghost"><i class="fa-solid fa-camera"></i> AR Guide</a>
             <a href="map3d.html" class="hero-btn ghost"><i class="fa-solid fa-cube"></i> 3D Map</a>
@@ -70,8 +70,8 @@
       <section class="stats-ribbon">
         <div class="stat-box">
           <i class="fa-solid fa-graduation-cap"></i>
-          <span class="stat-num">30+</span>
-          <span class="stat-label">Academic Programs</span>
+          <span class="stat-num">7</span>
+          <span class="stat-label">Colleges &amp; Institutes</span>
         </div>
         <div class="stat-box">
           <i class="fa-solid fa-building-columns"></i>
@@ -79,14 +79,14 @@
           <span class="stat-label">Main Buildings</span>
         </div>
         <div class="stat-box">
-          <i class="fa-solid fa-users"></i>
-          <span class="stat-num">10,000+</span>
-          <span class="stat-label">Active Students</span>
+          <i class="fa-solid fa-door-open"></i>
+          <span class="stat-num">163</span>
+          <span class="stat-label">Rooms &amp; Offices Mapped</span>
         </div>
         <div class="stat-box">
-          <i class="fa-solid fa-award"></i>
-          <span class="stat-num">100%</span>
-          <span class="stat-label">ALCU Accredited</span>
+          <i class="fa-solid fa-route"></i>
+          <span class="stat-num">3</span>
+          <span class="stat-label">Ways to Navigate (Map, 3D, AR)</span>
         </div>
       </section>
 
@@ -95,7 +95,7 @@
         <div class="ai-card-wrapper">
           <div class="ai-title-block">
             <span class="badge-pill"><i class="fa-solid fa-sparkles"></i> AI CAMPUS ASSISTANT</span>
-            <h2>Ask PLMun Go</h2>
+            <h2>Ask PLMUN Go</h2>
             <p>Type your question below (e.g., "Where is the clinic?"):</p>
           </div>
 
@@ -469,7 +469,7 @@
 
       <!-- Footer -->
       <footer>
-        <p>© 2025 Pamantasan ng Lungsod ng Muntinlupa | All Rights Reserved</p>
+        <p>© 2025–2026 Pamantasan ng Lungsod ng Muntinlupa | All Rights Reserved</p>
         <p>Contact us at <a href="https://mail.google.com/mail/?view=cm&fs=1&to=plmungo081028@gmail.com" target="_blank">PLMUNGo@gmail.com</a></p>
       </footer>
 
@@ -529,9 +529,13 @@
 
       // Central Campus Location Directory (Data Object)
       const campusDirectory = {
+        // HOW TO ADD A PICTURE:  find the room below, then set   image: "images/your-file.png"
+        // (for more than one picture use   images: ["images/a.png", "images/b.png"]   instead of image)
+        // Everything is grouped by BUILDING, then by FLOOR. The order does not matter to the search.
 
         // ==========================================================================
         // GENERAL: buildings, gate, gym, restrooms and other places that are not on one floor
+        // ==========================================================================
 
         "admin building": {
           text: "🏫 Admin Building (Del Pilar Building, Building 3): right of the Main Building and joined to it by the elevator/entrance strip. It has 5 floors. The elevator is at its far left end and works for floors 1 to 4.",
@@ -620,6 +624,7 @@
 
         // ==========================================================================
         // MABINI BUILDING (Student Center, Building 1)
+        // ==========================================================================
 
         // ----- 1st floor (6) -----
 
@@ -809,154 +814,155 @@
 
         // ==========================================================================
         // BONIFACIO BUILDING (Main Building, Building 2)
+        // ==========================================================================
 
         // ----- 1st floor (23) -----
 
         "assessment": {
           text: "📍 Assessment Office: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 5th room from the left, between the stairs and Supply Office.",
-          image: "images/boniAO.png"
+          image: "images/assessment-office.png"
         },
 
         "assessment office": {
           text: "📍 Assessment Office: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 5th room from the left, between the stairs and Supply Office.",
-          image: "images/boniAO.png"
+          image: "images/assessment-office.png"
         },
 
         "business center": {
           text: "📍 Business Center: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 3rd room from the left, between CAS & GAD Temporary Faculty and the main doors.",
-          image: "images/boniBC.png"
+          image: "images/business-center.png"
         },
 
         "cas & gad temporary faculty": {
           text: "📍 CAS & GAD Temporary Faculty: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 2nd room from the left, between CBA & CTE Temporary Faculty and Business Center.",
-          image: "images/boniCAS(TF).png"
+          image: "images/cas-gad-temporary-faculty.png"
         },
 
         "cba & cte temporary faculty": {
           text: "📍 CBA & CTE Temporary Faculty: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 1st room from the left, between the stairs and CAS & GAD Temporary Faculty.",
-          image: "images/boniCTE(T).png"
+          image: "images/cba-cte-temporary-faculty.png"
         },
 
         "ccj temporary faculty": {
           text: "📍 CCJ Temporary Faculty (1): found in 1st floor Bonifacio Building (Main Building, Building 2) — back row, 2nd room from the left, between Student CR and CCJ Temporary Faculty (2); and 1st floor Bonifacio Building (Main Building, Building 2) — back row, 3rd room from the left, between CCJ Temporary Faculty (1) and PLMun HRDMO.",
-          image: "images/boniCCJ(T).png"
+          image: "images/ccj-temporary-faculty-1.png"
         },
 
         "clinic": {
           text: "📍 University Clinic: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 7th room from the left, between Supply Office and Admin CR.",
-          image: "images/boniMC(UC).png"
+          image: "images/clinic.png"
         },
 
         "dental clinic": {
           text: "📍 University Clinic: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 7th room from the left, between Supply Office and Admin CR.",
-          image: "images/boniDC(UC).png"
+          image: "images/university-clinic.png"
         },
 
         "hr": {
           text: "📍 PLMun HRDMO: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 4th room from the left, between CCJ Temporary Faculty (2) and the stairs.",
-          image: "images/boniHRDMO.png"
+          image: "images/Research Building.png"
         },
 
         "hrdmo": {
           text: "📍 PLMun HRDMO: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 4th room from the left, between CCJ Temporary Faculty (2) and the stairs.",
-          image: "images/boniHRDMO.png"
+          image: "images/plmun-hrdmo.png"
         },
 
         "human resource": {
           text: "📍 PLMun HRDMO: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 4th room from the left, between CCJ Temporary Faculty (2) and the stairs.",
-          image: "images/boniHRDMO.png"
+          image: "images/plmun-hrdmo.png"
         },
 
         "medical clinic": {
           text: "📍 University Clinic: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 7th room from the left, between Supply Office and Admin CR.",
-          image: "images/boniMC(UC).png"
+          image: "images/university-clinic.png"
         },
 
         "nurse": {
           text: "📍 University Clinic: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 7th room from the left, between Supply Office and Admin CR.",
-          image: "images/boniMC(UC).png"
+          image: "images/university-clinic.png"
         },
 
         "plmun hrdmo": {
           text: "📍 PLMun HRDMO: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 4th room from the left, between CCJ Temporary Faculty (2) and the stairs.",
-          image: "images/boniHRDMO.png"
+          image: "images/plmun-hrdmo.png"
         },
 
         "records": {
           text: "📍 Records Office: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 4th room from the left, between the main doors and Soroptimist International of Alabang (SIA) Hall.",
-          image: "images/boniRO(RR).png"
+          image: "images/records-office.png"
         },
 
         "records office": {
           text: "📍 Records Office: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 4th room from the left, between the main doors and Soroptimist International of Alabang (SIA) Hall.",
-          image: "images/boniRO(RR).png"
+          image: "images/records-office.png"
         },
 
         "sia": {
           text: "📍 Soroptimist International of Alabang (SIA) Hall: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 5th room from the left, between Records Office and the stairs.",
-          image: "images/boniSIA1.png"
+          image: "images/soroptimist-international-of-alabang-sia-hall.png"
         },
 
         "sia hall": {
           text: "📍 Soroptimist International of Alabang (SIA) Hall: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 5th room from the left, between Records Office and the stairs.",
-          image: "images/boniSIA1.png"
+          image: "images/soroptimist-international-of-alabang-sia-hall.png"
         },
 
         "soroptimist": {
           text: "📍 Soroptimist International of Alabang (SIA) Hall: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 5th room from the left, between Records Office and the stairs.",
-          image: "images/boniSIA2.png"
+          image: "images/soroptimist-international-of-alabang-sia-hall.png"
         },
 
         "soroptimist international of alabang hall": {
           text: "📍 Soroptimist International of Alabang (SIA) Hall: 1st floor, Bonifacio Building (Main Building, Building 2) — front row, 5th room from the left, between Records Office and the stairs.",
-          image: "images/boniSIA2.png"
+          image: "images/soroptimist-international-of-alabang-sia-hall.png"
         },
 
         "supply": {
           text: "📍 Supply Office: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 6th room from the left, between Assessment Office and University Clinic.",
-          image: "images/boniSO.png"
+          image: "images/supply-office.png"
         },
 
         "supply office": {
           text: "📍 Supply Office: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 6th room from the left, between Assessment Office and University Clinic.",
-          image: "images/boniSO.png"
+          image: "images/supply-office.png"
         },
 
         "university clinic": {
           text: "📍 University Clinic: 1st floor, Bonifacio Building (Main Building, Building 2) — back row, 7th room from the left, between Supply Office and Admin CR.",
-          image: "images/boniMC(UC).png"
+          image: "images/university-clinic.png"
         },
 
         // ----- 2nd floor (27) -----
 
         "201": {
           text: "📍 Room 201: 2nd floor, Bonifacio Building (Main Building, Building 2) — back row, 2nd room from the left, between Student CR and Computer Laboratory 4.",
-          image: "images/boni201(1).png"
+          image: "images/room-201.png"
         },
 
         "202": {
           text: "📍 Room 202: 2nd floor, Bonifacio Building (Main Building, Building 2) — front row, 1st room from the left, between the stairs and Room 203.",
-          image: "images/boni202.png"
+          image: "images/room-202.png"
         },
 
         "203": {
           text: "📍 Room 203: 2nd floor, Bonifacio Building (Main Building, Building 2) — front row, 2nd room from the left, between Room 202 and BAPOL & BAPAD Temporary Faculty.",
-          image: "images/boni203.png"
+          image: "images/room-203.png"
         },
 
         "bapad": {
           text: "📍 BAPOL & BAPAD Temporary Faculty: 2nd floor, Bonifacio Building (Main Building, Building 2) — front row, 3rd room from the left, between Room 203 and Multimedia & Laboratory Management Office.",
-          image: "images/boniBAPOL_BAPAD(T).png"
+          image: "images/bapol-bapad-temporary-faculty.png"
         },
 
         "bapol": {
           text: "📍 BAPOL & BAPAD Temporary Faculty: 2nd floor, Bonifacio Building (Main Building, Building 2) — front row, 3rd room from the left, between Room 203 and Multimedia & Laboratory Management Office.",
-          image: "images/boniBAPOL_BAPAD(T).png"
+          image: "images/bapol-bapad-temporary-faculty.png"
         },
 
         "bapol & bapad temporary faculty": {
           text: "📍 BAPOL & BAPAD Temporary Faculty: 2nd floor, Bonifacio Building (Main Building, Building 2) — front row, 3rd room from the left, between Room 203 and Multimedia & Laboratory Management Office.",
-          image: "images/boniBAPOL_BAPAD(T).png"
+          image: "images/bapol-bapad-temporary-faculty.png"
         },
 
         "citcs": {
