@@ -53,7 +53,7 @@
     <a class="back" href="index.html">← Home</a>
     <span class="title">3D Campus Map</span>
   </div>
-  <div class="hint">Drag to move · pinch or scroll to zoom · twist (or right-drag) to turn · tap a room</div>
+  <div class="hint">Drag to turn · right-drag or 2 fingers to move · pinch or scroll to zoom · tap a room</div>
   <div class="chips" id="blds"></div>
   <div class="chips" id="floors"></div>
 
@@ -842,9 +842,9 @@
     }
 
     /* ===== 8. controls (no buttons: just drag, pinch and scroll) =====
-       Drag ................ move the map around (with a little glide when you let go)
+       Drag ................ turn and tilt the map (as it always was)
        Pinch / scroll ...... zoom toward your fingers or the pointer
-       Two fingers twist ... turn the map           Right-drag (mouse) ... turn and tilt
+       Two fingers ......... move the map (and twist to turn)     Right-drag (mouse) ... move the map
        Double-tap / double-click zooms in there. Keyboard: arrows or W A S D move, Q / E turn, + / - zoom, 0 resets. */
     var ptrs = {}, last2 = null, moved = 0, vx = 0, vy = 0;
     var DMIN = 14, DMAX = 300;
@@ -876,8 +876,8 @@
         last2 = { mx: mx, my: my, d: d, an: an }; moved = 99; vx = vy = 0; return;
       }
       moved += Math.abs(dx) + Math.abs(dy);
-      if ((e.buttons & 2) || e.shiftKey || e.ctrlKey) { cam.yaw -= dx * 0.006; cam.pitch += dy * 0.005; clampCam(); }      // right-drag: turn + tilt
-      else { panBy(dx, dy); vx = vx * 0.4 + dx * 0.6; vy = vy * 0.4 + dy * 0.6; }                                              // drag: move the map
+      if ((e.buttons & 2) || e.shiftKey || e.ctrlKey) panBy(dx, dy);                                                           // right-drag / Shift-drag: move the map
+      else { cam.yaw -= dx * 0.006; cam.pitch += dy * 0.005; clampCam(); }                                                     // drag: turn and tilt (as before)
     });
     function up(e) {
       var wasTap = moved < 6 && ptrs[e.pointerId];
