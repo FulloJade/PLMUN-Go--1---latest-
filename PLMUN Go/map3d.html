@@ -792,6 +792,14 @@
         ctx.strokeStyle = UNI.trim; ctx.lineWidth = Math.max(1, 0.05 * u); rr(fx + 0.1 * u, fy - (hip + 0.55 + bob) * u, 0.22 * u, 0.2 * u, 0.03 * u); ctx.stroke();
       }
       ctx.fillStyle = UNI.badge; ctx.beginPath(); ctx.arc(fx + 0.2 * u, fy - (hip + 0.44 + bob) * u, 0.075 * u, 0, 7); ctx.fill(); ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(fx + 0.2 * u, fy - (hip + 0.44 + bob) * u, 0.04 * u, 0, 7); ctx.fill();   // school emblem
+      // student ID on a green lanyard (cheap: one strap, one card)
+      var ly = fy - (hip + 0.76 + bob) * u, cy = fy - (hip + 0.4 + bob) * u;
+      ctx.strokeStyle = '#15803d'; ctx.lineWidth = Math.max(1, 0.07 * u); ctx.beginPath();
+      ctx.moveTo(fx - 0.16 * u, ly); ctx.lineTo(fx, cy); ctx.lineTo(fx + 0.16 * u, ly); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; rr(fx - 0.15 * u, cy, 0.3 * u, 0.36 * u, 0.03 * u); ctx.fill();            // clear holder
+      ctx.fillStyle = '#16a34a'; rr(fx - 0.12 * u, cy + 0.03 * u, 0.24 * u, 0.3 * u, 0.02 * u); ctx.fill();   // the green ID
+      ctx.fillStyle = '#f1f5f9'; ctx.fillRect(fx - 0.08 * u, cy + 0.07 * u, 0.16 * u, 0.12 * u);            // photo
+      ctx.fillStyle = '#bbf7d0'; ctx.fillRect(fx - 0.08 * u, cy + 0.23 * u, 0.16 * u, 0.05 * u);            // name strip
       // arms
       [-1, 1].forEach(function (a) {
         var ax = fx + a * 0.43 * u, ex = ax + a * 0.04 * u + (p.sit ? 0.2 * face * u : -a * sw * 0.7 * u * face), ey = fy - (hip + 0.08 + bob) * u + (p.sit ? -0.1 * u : 0);
