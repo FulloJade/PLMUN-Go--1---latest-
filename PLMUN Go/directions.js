@@ -392,6 +392,7 @@
       '<button type="button" class="route-swap" title="Swap start and destination" aria-label="Swap"><i class="fa-solid fa-right-left"></i></button>' +
       '<label>To<select id="route-to"></select></label>' +
       '</div>' +
+      '<label class="route-stepfree" style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:.92rem"><input type="checkbox" id="route-stepfree"> <span><i class="fa-solid fa-wheelchair"></i> Step-free route (use elevators, avoid stairs where possible)</span></label>' +
       '<div class="route-actions"><button type="button" class="route-go"><i class="fa-solid fa-diamond-turn-right"></i> Show route</button>' +
       '<button type="button" class="route-read"><i class="fa-solid fa-volume-high"></i> Read aloud</button></div>' +
       '<p class="route-summary" id="route-summary" hidden></p>' +
@@ -418,6 +419,11 @@
         closePanel();
       }
     });
+    var sf = panel.querySelector('#route-stepfree');
+    if (window.PLMunLayout) {
+      sf.checked = !!window.PLMunLayout.stepFree;
+      sf.addEventListener('change', function () { window.PLMunLayout.setStepFree(sf.checked); if (fromSel.value && toSel.value) showRouteFromSelects(); });
+    }
     panel.querySelector('.route-close').addEventListener('click', closePanel);
     panel.querySelector('.route-go').addEventListener('click', showRouteFromSelects);
     panel.querySelector('.route-swap').addEventListener('click', function () {

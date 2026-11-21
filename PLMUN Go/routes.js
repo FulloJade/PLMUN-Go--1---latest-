@@ -515,9 +515,29 @@
   }
 
   // go from floor `from` to floor `to` inside one building; returns steps + where you end up
+  var ACC = false, ACC_OK = true;          // step-free mode flag + whether the whole route managed to stay step-free
   function changeFloor(bk, from, pos, to, canWalk) {
     var steps = [];
     if (from === to) return { steps: steps, pos: pos };
+    if (ACC) {
+      var upA = to > from, nA = Math.abs(to - from), liftOK = from <= 4 && to <= 4 && hasElevator('delpilar', from) && hasElevator('delpilar', to);
+      if ((bk === 'delpilar' || bk === 'bonifacio') && liftOK) {
+        if (bk === 'delpilar') {
+          if (canWalk) steps.push({ dir: dirBetween(pos, 0), text: 'Walk to the elevator at the far LEFT end of the back row.' });
+        } else if (canWalk) {
+          steps.push({ dir: dirBetween(pos, 1), text: 'Walk to the far RIGHT end of the hallway, where Bonifacio joins Del Pilar.' });
+          steps.push({ dir: 'up', text: 'Step into the Del Pilar side. The elevator is right there, at the far left end of its back row.' });
+        }
+        steps.push({ dir: upA ? 'up' : 'down', text: 'Take the ELEVATOR ' + (upA ? 'UP ' : 'DOWN ') + plural(nA, 'floor') + ' to the ' + ORD[to] + ' floor.' });
+        if (bk === 'bonifacio') steps.push({ dir: 'up', text: 'Leave the elevator and walk back into Bonifacio on the ' + ORD[to] + ' floor.' });
+        return { steps: steps, pos: bk === 'delpilar' ? 0 : 1 };
+      }
+      ACC_OK = false;
+      var why = bk === 'delpilar' ? 'The elevator does not reach the ' + ORD[Math.max(from, to)] + ' floor of Del Pilar.' :
+                bk === 'bonifacio' ? 'The Del Pilar elevator only serves floors 1 to 4.' :
+                BUILDINGS[bk].name + ' has no elevator.';
+      steps.push({ dir: 'up', text: 'NOTE: no step-free way between these floors. ' + why + ' The stairs are the only way, so please ask the guard or a staff member for help.', warn: true });
+    }
     var up = to > from, st = stairsBetween(bk, from, to, pos), n = Math.abs(to - from);
     var elev = hasElevator(bk, from) && hasElevator(bk, to);
     if (st && canWalk) steps.push({ dir: dirBetween(pos, st.pos), text: 'Walk to ' + stairsText(bk, st, up, elev) + '.' });
@@ -596,7 +616,22 @@
     return 'up';
   }
 
-  function autoRoute(a, b) {
+  function autoRoute(a, b, opts) {
+    ACC = opts ? !!opts.accessible : !!(window.PLMunLayout && window.PLMunLayout.stepFree); ACC_OK = true;
+    var res = autoRoute0(a, b);
+    if (ACC) {
+      res.stepFree = ACC_OK;
+      if (res.length && res.length < 200) {
+        var outside = !(a && b && a.bk === b.bk && a.bk !== 'campus') && !(a && b && nodeOf(a) === 'mainadmin' && nodeOf(b) === 'mainadmin');
+        res.unshift({ dir: 'up', warn: !ACC_OK, text: ACC_OK
+          ? 'Step-free route: this uses the elevator wherever the building has one.' + (outside ? ' Building entrances and the outdoor paths are not yet checked for steps or ramps.' : '')
+          : 'Step-free route: part of this trip cannot be made step-free. See the NOTE below.' });
+      }
+    }
+    ACC = false;
+    return res;
+  }
+  function autoRoute0(a, b) {
     if (!a || !b || a.key === b.key) return [];
     var na = nodeOf(a), nb = nodeOf(b);
     if (a.bk === b.bk && a.bk !== 'campus') return sameBuilding(a, b);
@@ -611,6 +646,8 @@
 
   window.PLMunLayout = {
     BUILDINGS: BUILDINGS, ROOMS: ROOMS, BY_KEY: BY_KEY, ORD: ORD, OUT: OUT,
+    stepFree: (function () { try { return localStorage.getItem('plmun_stepfree') === '1'; } catch (e) { return false; } })(),
+    setStepFree: function (v) { window.PLMunLayout.stepFree = !!v; try { localStorage.setItem('plmun_stepfree', v ? '1' : '0'); } catch (e) {} },
     find: find, route: autoRoute, where: whereText, nodeOf: nodeOf
   };
 })();

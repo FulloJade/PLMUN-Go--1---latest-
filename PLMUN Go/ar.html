@@ -167,8 +167,9 @@
     /* ---------------- a searchable list of rooms ---------------- */
     function picker(title, hint, onPick, extraHtml) {
       card.innerHTML = '<h3>' + esc(title) + '</h3><p>' + hint + '</p>' + (extraHtml || '') +
-        '<input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px"><input type="checkbox" id="sfree"' + (L.stepFree ? ' checked' : '') + '> &#9855; Step-free route (elevator)</label><input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
       var q = $('q'), res = $('res');
+      $('sfree').onchange = function () { L.setStepFree(this.checked); };
       function show() {
         var t = q.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
         var list = ROOMS.filter(function (r) {

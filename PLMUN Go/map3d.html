@@ -63,6 +63,7 @@
     <div class="grab" id="grab"><span>🧭 Show a route</span><small id="gstate">tap to close</small></div>
     <div class="body">
       <div class="row"><select id="from"></select><select id="to"></select></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="stepfree"> <span>&#9855; Step-free route (elevators, no stairs where possible)</span></label>
       <div class="row"><button class="btn" id="go">Show route</button><button class="btn ghost" id="swap">Swap</button><button class="btn ghost" id="clear">Clear</button></div>
       <ol id="steps"></ol>
       <div class="legend">
@@ -977,6 +978,8 @@
       fly({ tx: (minx + maxx) / 2 + (W >= 900 ? span * 0.22 : 0), ty: 3, tz: (minz + maxz) / 2, dist: Math.min(240, span * (W < 700 ? 2.7 : 1.9) + 20), pitch: 0.9 });
       $('gstate').textContent = 'tap to hide';
     }
+    $('stepfree').checked = !!L.stepFree;
+    $('stepfree').onchange = function () { L.setStepFree(this.checked); if ($('from').value && $('to').value) showRoute(); };
     $('go').onclick = showRoute;
     $('swap').onclick = function () { var t = $('from').value; $('from').value = $('to').value; $('to').value = t; if ($('from').value && $('to').value) showRoute(); };
     $('clear').onclick = function () { route = null; $('steps').innerHTML = ''; $('from').value = ''; $('to').value = ''; setFocus(null); };
