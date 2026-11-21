@@ -624,8 +624,8 @@
       if (res.length && res.length < 200) {
         var outside = !(a && b && a.bk === b.bk && a.bk !== 'campus') && !(a && b && nodeOf(a) === 'mainadmin' && nodeOf(b) === 'mainadmin');
         res.unshift({ dir: 'up', warn: !ACC_OK, text: ACC_OK
-          ? 'Step-free route: this uses the elevator wherever the building has one.' + (outside ? ' Building entrances and the outdoor paths are not yet checked for steps or ramps.' : '')
-          : 'Step-free route: part of this trip cannot be made step-free. See the NOTE below.' });
+          ? 'Step-free route: this uses the elevator wherever the building has one. The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.' + (outside ? ' Building entrances and the outdoor paths are not yet checked for steps or ramps.' : '')
+          : 'Step-free route: part of this trip cannot be made step-free. See the NOTE below. The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.' });
       }
     }
     ACC = false;

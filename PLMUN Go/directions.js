@@ -393,7 +393,7 @@
       '<button type="button" class="route-swap" title="Swap start and destination" aria-label="Swap"><i class="fa-solid fa-right-left"></i></button>' +
       '<label>To<select id="route-to"></select></label>' +
       '</div>' +
-      '<label class="route-stepfree" style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:.92rem"><input type="checkbox" id="route-stepfree"> <span><i class="fa-solid fa-wheelchair"></i> Step-free route (use elevators, avoid stairs where possible)</span></label>' +
+      '<label class="route-stepfree" style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:.92rem"><input type="checkbox" id="route-stepfree"> <span><i class="fa-solid fa-wheelchair"></i> Step-free route (for persons with disabilities)<br><small style="opacity:.8">The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.</small></span></label>' +
       '<div class="route-actions"><button type="button" class="route-go"><i class="fa-solid fa-diamond-turn-right"></i> Show route</button>' +
       '<button type="button" class="route-read"><i class="fa-solid fa-volume-high"></i> Read aloud</button></div>' +
       '<p class="route-summary" id="route-summary" hidden></p>' +

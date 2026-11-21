@@ -167,7 +167,7 @@
     /* ---------------- a searchable list of rooms ---------------- */
     function picker(title, hint, onPick, extraHtml) {
       card.innerHTML = '<h3>' + esc(title) + '</h3><p>' + hint + '</p>' + (extraHtml || '') +
-        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px"><input type="checkbox" id="sfree"' + (L.stepFree ? ' checked' : '') + '> &#9855; Step-free route (elevator)</label><input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px"><input type="checkbox" id="sfree"' + (L.stepFree ? ' checked' : '') + '> <span>&#9855; Step-free route (for persons with disabilities)<br><small style="opacity:.8">The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.</small></span></label><input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
       var q = $('q'), res = $('res');
       $('sfree').onchange = function () { L.setStepFree(this.checked); };
       function show() {
