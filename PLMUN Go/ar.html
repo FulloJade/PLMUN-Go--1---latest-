@@ -337,6 +337,12 @@
         var ring = [], k; for (k = 0; k <= 24; k++) ring.push([Math.cos(k / 24 * 6.2832) * .42, Math.sin(k / 24 * 6.2832) * .42]);
         return [{ pts: ribbon(ring, .07), fill: '#22c55e' }, { pts: ribbon([[-.2, .02], [-.05, .17], [.22, -.16]], .07), fill: '#22c55e' }];
       }
+      if (/^take the elevator/i.test(text || '')) {      // elevator: a lift car with an up / down arrow
+        var goUp = /elevator up/i.test(text), car = [[-.42, -.5], [.42, -.5], [.42, .5], [-.42, .5]];
+        var tri = goUp ? [[0, -.36], [.26, -.02], [-.26, -.02]] : [[0, .36], [.26, .02], [-.26, .02]];
+        var stem = goUp ? [[-.09, -.04], [.09, -.04], [.09, .34], [-.09, .34]] : [[-.09, .04], [.09, .04], [.09, -.34], [-.09, -.34]];
+        return [{ pts: car, fill: '#a855f7' }, { pts: tri, fill: '#ffffff' }, { pts: stem, fill: '#ffffff' }];
+      }
       if (vertical) {
         var up = dir === 'up', st = [[-.5, .5], [-.5, .22], [-.17, .22], [-.17, -.03], [.17, -.03], [.17, -.28], [.5, -.28], [.5, .5]];
         if (!up) st = st.map(function (p) { return [-p[0], p[1]]; });
@@ -418,7 +424,7 @@
     }
     function wrapPi(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
     function relOf(dir) { return dir === 'right' ? Math.PI / 2 : dir === 'left' ? -Math.PI / 2 : dir === 'down' ? Math.PI : 0; }
-    function isVertical(st) { return /^go (up|down)/i.test(st.text || ''); }
+    function isVertical(st) { return /^(go (up|down)|take the elevator)/i.test(st.text || ''); }
     function targetAz(i) {                    // the world direction to walk in for step i
       if (anchorAz == null || !steps[i]) return null;
       var b = anchorAz, j;

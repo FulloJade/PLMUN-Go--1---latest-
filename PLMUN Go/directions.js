@@ -271,6 +271,7 @@
 
   function iconFor(s) {
     if (/^(Go UP|Go DOWN)/.test(s.text)) return 'fa-stairs';
+    if (/^Take the ELEVATOR/.test(s.text)) return 'fa-elevator';
     if (/^(Enter|Leave|Walk to the main doors|You are on the ground floor)/.test(s.text)) return 'fa-door-open';
     return { left: 'fa-arrow-left', right: 'fa-arrow-right', up: 'fa-person-walking', down: 'fa-arrow-down', arrive: 'fa-flag-checkered' }[s.dir] || 'fa-person-walking';
   }

@@ -563,8 +563,22 @@
       return cellCenter(r.bk, r.floor, r.row, r.idx);
     }
     // walk inside one building from (cur,floor) to floor `to`; returns the new position
+    function liftCell(f) {           // the Del Pilar elevator on floor f
+      var fl = BLD.delpilar.floors[f], res = null;
+      if (!fl || fl.list) return null;
+      Object.keys(fl).forEach(function (row) { var i = fl[row].indexOf('#elevator'); if (i > -1 && !res) res = cellCenter('delpilar', f, row, i); });
+      return res;
+    }
     function inside(pts, bk, cur, from, to) {
       if (from === to) return cur;
+      if (L.stepFree && (bk === 'delpilar' || bk === 'bonifacio') && from <= 4 && to <= 4 && liftCell(from) && liftCell(to)) {
+        var hzL = hallZ(bk), e1 = liftCell(from), e2 = liftCell(to);
+        pts.push(P(cur.x, hzL, from));
+        if (bk === 'bonifacio') { var jx = G.bonifacio.x1 - 0.6; pts.push(P(jx, hzL, from)); pts.push(P(e1.x, hzL, from)); }
+        pts.push(P(e1.x, e1.z, from)); pts.push(P(e2.x, e2.z, to)); pts.push(P(e2.x, hzL, to));
+        if (bk === 'bonifacio') { pts.push(P(G.bonifacio.x1 - 0.6, hzL, to)); return { x: G.bonifacio.x1 - 0.6, z: hzL }; }
+        return { x: e2.x, z: hzL };
+      }
       var st = pickSt(bk, from, to, cur.x), hz = hallZ(bk);
       if (!st) return cur;
       pts.push(P(cur.x, hz, from)); pts.push(P(st.x, hz, from)); pts.push(P(st.x, st.z, from));
