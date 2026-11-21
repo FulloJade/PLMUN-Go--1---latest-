@@ -72,6 +72,8 @@
     .results button:hover { background: rgba(253,224,71,.25); }
     .badge { display: inline-block; background: #fde047; color: #081e42; border-radius: 12px; padding: 2px 9px; font-size: .72rem; font-weight: 700; margin-left: 6px; vertical-align: middle; }
   </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#081e42">
 </head>
 <body>
 
@@ -260,7 +262,11 @@
     }
     function startScan() {
       startMarkers();
-      if (!('BarcodeDetector' in window)) return;
+      if (!('BarcodeDetector' in window)) {        // iPhone Safari and some browsers cannot read QR inside a page
+        var rs = document.querySelector('#reticle span');
+        if (rs) rs.textContent = 'Point at a PLMUN Go marker, or scan the QR with your phone\u2019s Camera app';
+        return;
+      }
       try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; return; }
       var busy = false, lastSeen = '';
       scanTimer = setInterval(function () {

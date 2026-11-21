@@ -172,6 +172,27 @@
     function showNote(html) { note.innerHTML = html; note.hidden = false; }
     function hideNote() { note.hidden = true; }
 
+
+    /* ================= FILIPINO WORDS -> the English keywords the directory knows ================= */
+    var TAGALOG = [
+      [/\b(nasaan|saan)( po)?( ba)?( ang| ung| yung| si)?\b/g, 'where is '],
+      [/\bpaano (po )?(pumunta|makarating|magpunta)( po)?( sa| kay)?\b/g, 'how to get to '],
+      [/\bpapunta( po)? sa\b/g, 'to '], [/\bmula sa\b/g, 'from '], [/\bhanggang sa\b/g, 'to '],
+      [/\b(banyo|palikuran|kubeta|inidoro)\b/g, 'comfort room'],
+      [/\bklinika\b/g, 'clinic'], [/\b(aklatan|silid[- ]aklatan)\b/g, 'library'],
+      [/\b(kantina|kainan)\b/g, 'cafeteria'], [/\b(tanggapan|opisina)\b/g, 'office'],
+      [/\b(gusali)\b/g, 'building'], [/\b(palapag)\b/g, 'floor'],
+      [/\b(unang)\b/g, 'first'], [/\b(ikalawang|pangalawang)\b/g, 'second'], [/\b(ikatlong|pangatlong)\b/g, 'third'],
+      [/\b(ikaapat na|pang-?apat na)\b/g, 'fourth'], [/\b(ikalimang|panlimang)\b/g, 'fifth'],
+      [/\b(pasukan|tarangkahan)\b/g, 'main gate'], [/\b(hagdan)\b/g, 'stairs'],
+      [/\b(pinakamalapit|pinakamalapit na|malapit)\b/g, 'nearest'],
+      [/\b(kasama|ba po|po|ba)\b/g, ' ']
+    ];
+    function fromFilipino(q) {
+      var out = ' ' + q.toLowerCase() + ' ', hit = false;
+      TAGALOG.forEach(function (t) { var b = out; out = out.replace(t[0], t[1]); if (out !== b) hit = true; });
+      return hit ? out.replace(/\s+/g, ' ').trim() : q;
+    }
     /* ================= runs before your existing handlers ================= */
     function beforeAsk() {
       var q = input.value.trim();
@@ -179,6 +200,8 @@
       pendingQuery = q;
       hideNote();
 
+      var tl = fromFilipino(q);
+      if (tl !== q) { q = tl; input.value = tl; }
       var fixed = fixTypos(q);
       if (fixed !== q) { input.value = fixed; showNote('Showing results for <b>' + esc(changed.join(', ')) + '</b>'); }
 

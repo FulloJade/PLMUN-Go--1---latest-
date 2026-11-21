@@ -401,3 +401,5 @@
     });
   });
 })();
+/* Offline support: register the service worker once (HTTPS / localhost only) */
+try { if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href)) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); } catch (e) {}
