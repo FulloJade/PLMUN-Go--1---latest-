@@ -260,8 +260,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const popupImg = document.getElementById('popupImg');
     const popupTitle = document.getElementById('popupTitle');
     const popupDesc = document.getElementById('popupDesc');
+    const popupLink = document.getElementById('popupLink');
+    const popupLinkText = document.getElementById('popupLinkText');
+    let hideTimer = null;
+    // small delay so the mouse can travel from the pin onto the card (and click its button)
+    const hideSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { mapPopup.style.display = 'none'; }, 350); };
 
     if (mapPins.length > 0 && mapPopup) {
+        mapPopup.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        mapPopup.addEventListener('mouseleave', hideSoon);
+        mapPopup.addEventListener('click', (event) => event.stopPropagation());
         
         // Unified function to populate and position the popup
         // Unified function to populate and position the popup
@@ -273,6 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (popupTitle) popupTitle.textContent = title;
             if (popupImg) popupImg.src = image;
             if (popupDesc) popupDesc.textContent = desc;
+
+            // The button opens the 3D map already zoomed on this building, with its floors ready to tap
+            const b = pin.getAttribute('data-b');
+            if (popupLink) popupLink.href = b ? 'map3d.html?b=' + b : 'map3d.html';
+            if (popupLinkText) popupLinkText.textContent = b ? 'See floors in 3D' : 'See it in 3D';
+            clearTimeout(hideTimer);
 
             // Set the baseline vertical position
             mapPopup.style.top = (pin.offsetTop - 120) + 'px';
@@ -297,9 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 openPopup(pin);
             });
 
-            pin.addEventListener('mouseleave', () => {
-                mapPopup.style.display = 'none';
-            });
+            pin.addEventListener('mouseleave', hideSoon);
 
             // -- Mobile Tap Behavior --
             pin.addEventListener('click', (event) => {

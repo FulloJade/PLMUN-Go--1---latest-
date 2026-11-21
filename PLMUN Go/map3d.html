@@ -993,6 +993,7 @@
       if ($('from').value && $('to').value) showRoute();
     } catch (e) { }
     window.PLMun3D = { showRoute: showRoute, setFocus: setFocus, cam: cam, G: G, setFloor: function (n) { floorSel = n; chips(); } };
+    try { var wanted = new URLSearchParams(location.search).get('b'); if (wanted && G[wanted]) setFocus(wanted); } catch (e) { }   // map3d.html?b=bonifacio opens zoomed on that building
     requestAnimationFrame(frame);
   })();
   </script>

@@ -5157,3 +5157,11 @@ body.campuslife-page {
   background: #fde047;
   color: #081e42;
 }
+
+/* === Map pin card: "See floors in 3D" button === */
+.map-popup { pointer-events: auto !important; }
+.map-popup h3 { margin: 6px 0 2px; font-size: 1rem; color: #081e42; }
+.map-popup p { margin: 0 0 8px; font-size: .85rem; color: #64748b; }
+.map-popup p:empty { display: none; }
+.map-popup .popup-3d { display: block; text-align: center; background: #fde047; color: #081e42; font-weight: 700; font-size: .82rem; padding: 8px 10px; border-radius: 10px; text-decoration: none; }
+.map-popup .popup-3d:hover { background: #facc15; }

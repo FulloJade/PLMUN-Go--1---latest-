@@ -146,11 +146,11 @@
             <img src="images/finalmap(updated).PNG" alt="Campus Map" class="campus-map-img">
 
             <!-- PINS -->
-            <div class="map-pin" data-title="Bonifacio Building" data-image="images/admin.png" data-desc="Academic Building 2" style="top: 28%; left: 48%;"></div>
-            <div class="map-pin" data-title="Del Pilar Building" data-image="images/Building2.png" data-desc="Academic Building 3" style="top: 14%; left: 70%;"></div>
+            <div class="map-pin" data-b="bonifacio" data-title="Bonifacio Building" data-image="images/admin.png" data-desc="Academic Building 2" style="top: 28%; left: 48%;"></div>
+            <div class="map-pin" data-b="delpilar" data-title="Del Pilar Building" data-image="images/Building2.png" data-desc="Academic Building 3" style="top: 14%; left: 70%;"></div>
             <div class="map-pin" data-title="University Gymnasium" data-image="images/gym.jpg" style="top: 55%; left: 40%;"></div>
-            <div class="map-pin" data-title="Rizal Building" data-image="images/Research Building.png" data-desc="Academic Building 4" style="top: 21%; left: 87%;"></div>
-            <div class="map-pin" data-title="Mabini Building" data-image="images/Building3.png" data-desc="Academic Building 1" style="top: 46%; left: 19%;"></div>
+            <div class="map-pin" data-b="rizal" data-title="Rizal Building" data-image="images/Research Building.png" data-desc="Academic Building 4" style="top: 21%; left: 87%;"></div>
+            <div class="map-pin" data-b="mabini" data-title="Mabini Building" data-image="images/Building3.png" data-desc="Academic Building 1" style="top: 46%; left: 19%;"></div>
                  
             <a href="map3d.html" class="map-3d-fab" aria-label="Explore the campus map in 3D"><i class="fa-solid fa-cube"></i> Explore Map in 3D</a>
             
@@ -159,6 +159,7 @@
               <img id="popupImg" src="">
               <h3 id="popupTitle"></h3>
               <p id="popupDesc"></p>
+              <a class="popup-3d" id="popupLink" href="map3d.html"><i class="fa-solid fa-cube"></i> <span id="popupLinkText">See floors in 3D</span> →</a>
             </div>
           </div>
         </div>
@@ -662,6 +663,11 @@
           image: "images/treasury.jpg"
         },
 
+        "sc1CR": {
+          text: "🚻 CR, 1st floor, Mabini Building (Student Center, Building 1): Restroom on this floor.",
+          image: "images/sc1CR.png"
+        },
+
         // ----- 2nd floor (18) -----
 
         "alumni": {
@@ -749,6 +755,11 @@
           image: "images/scOSA.png"
         },
 
+        "sc2CR": {
+          text: "🚻 CR, 2nd floor, Mabini Building (Student Center, Building 1): Restroom on this floor.",
+          image: "images/sc2CR.png"
+        },
+
         // ----- 3rd floor (14) -----
 
         "chorale": {
@@ -816,6 +827,10 @@
           image: "images/scTWP.png"
         },
 
+        "sc3CR": {
+          text: "🚻 CR, 3rd floor, Mabini Building (Student Center, Building 1): Restroom on this floor.",
+          image: "images/sc3CR.png"
+        },
 
         // ==========================================================================
         // BONIFACIO BUILDING (Main Building, Building 2)
@@ -1537,6 +1552,11 @@
         "vpsld": {
           text: "📍 Vice President for Students' Life and Development: 1st floor, Del Pilar Building (Admin Building, Building 3) — front row, 3rd room from the left, between Quality Assurance Office and Executive Vice President.",
           image: "images/redcarpet.png"
+        },
+
+        "dp1CR": {
+          text: "🚻 CR, 1st floor, Del Pilar Building (Admin Building, Building 3): Student CR: far right end of the back row, past the cafeteria.",
+          image: "images/dp cr right.png"
         },
 
         // ----- 2nd floor (20) -----
@@ -2596,37 +2616,7 @@
         });
       }
 
-      // ==========================================
-      // 2. CAMPUS MAP PIN HOVER FEATURE
-      // ==========================================
-      const mapPins = document.querySelectorAll('.map-pin');
-      const mapPopup = document.getElementById('mapPopup');
-      const popupImg = document.getElementById('popupImg');
-      const popupTitle = document.getElementById('popupTitle');
-      const popupDesc = document.getElementById('popupDesc');
-
-      if (mapPins.length > 0 && mapPopup) {
-        mapPins.forEach(pin => {
-          pin.addEventListener('mouseenter', () => {
-            const title = pin.getAttribute('data-title');
-            const image = pin.getAttribute('data-image');
-            const desc = pin.getAttribute('data-desc') || '';
-
-            if (popupTitle) popupTitle.textContent = title;
-            if (popupImg) popupImg.src = image;
-            if (popupDesc) popupDesc.textContent = desc;
-            
-            mapPopup.style.display = 'block';
-            mapPopup.style.top = (pin.offsetTop - 120) + 'px';
-            mapPopup.style.left = (pin.offsetLeft + 10) + 'px';
-          });
-
-          pin.addEventListener('mouseleave', () => {
-            mapPopup.style.display = 'none';
-          });
-        });
-      }
-
+      // (The campus map pins and their pop-up card are handled in script.js)
     });
   </script>
 
