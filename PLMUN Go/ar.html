@@ -53,9 +53,68 @@
     #arrow .done { display: none; font-size: 6rem; text-align: center; line-height: 220px; }
     #arrow.arrive .done { display: block; }
 
-    /* bottom card */
-    .card { background: rgba(8,30,66,.88); backdrop-filter: blur(8px); border-radius: 20px; padding: 16px; max-height: 46vh; overflow-y: auto; }
-    .card h3 { margin: 0 0 4px; font-size: 1.05rem; color: #fde047; }
+    /* ---------- draggable bottom sheet card ---------- */
+    .card {
+      background: rgba(8,30,66,.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 -6px 28px rgba(0,0,0,.45);
+      max-height: 52vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1);
+      will-change: transform;
+    }
+    .card.dragging { transition: none; }
+
+    .sheet-handle {
+      padding: 10px 16px 8px;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .sheet-handle:active { cursor: grabbing; }
+
+    .drag-pill {
+      width: 42px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.38);
+      margin: 0 auto 8px;
+    }
+
+    .sheet-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sheet-header-row h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: #fde047;
+      line-height: 1.3;
+    }
+    .sheet-toggle-icon {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,.7);
+      background: rgba(255,255,255,.1);
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .sheet-body {
+      padding: 2px 16px 16px;
+      overflow-y: auto;
+      flex: 1;
+      overscroll-behavior: contain;
+    }
+
     .card p { margin: 0 0 10px; line-height: 1.55; font-size: .95rem; }
     .card img { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 12px; margin: 0 0 10px; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -118,21 +177,7 @@
   <script src="aruco.js"></script>
 
   <script>
-  /* =========================================================================
-     OPTIONAL: hand-written routes that OVERRIDE the automatic ones.
-     Use the room name for "from" and "to". dir = "up" (straight), "left",
-     "right", "down" (turn around). photo is optional.
-     Leave it empty ({}) to use only automatic routes. The layout itself
-     (rooms, stairs, outside walking) lives in routes.js.
-     ========================================================================= */
-  var AR_ROUTES = {
-    // 'Room 221': {
-    //   'Office of the University Registrar': [
-    //     { dir: 'left', text: 'Walk back along the corridor.', photo: 'images/your-photo.png' }
-    //   ]
-    // }
-  };
-
+  var AR_ROUTES = {};
   var SITE_HOME = 'index.html';
   </script>
 
@@ -152,6 +197,100 @@
       return custom || L.route(a, b);
     }
 
+    /* ---------------- draggable bottom sheet logic ---------------- */
+    var isMinimized = false;
+    var isDragging = false;
+    var dragStartY = 0;
+    var currentTranslateY = 0;
+    var didDragMove = false;
+
+    function getMinimizedOffset() {
+      var handle = card.querySelector('.sheet-handle');
+      if (!handle) return 0;
+      return Math.max(0, card.offsetHeight - handle.offsetHeight);
+    }
+
+    function updateToggleLabel() {
+      var lbl = card.querySelector('.sheet-toggle-icon');
+      if (lbl) lbl.textContent = isMinimized ? '▲ Expand' : '▼ Minimize';
+    }
+
+    function applySheetPosition(y, animate) {
+      if (animate) card.classList.remove('dragging');
+      else card.classList.add('dragging');
+      card.style.transform = 'translateY(' + y + 'px)';
+      currentTranslateY = y;
+      updateToggleLabel();
+    }
+
+    function setMinimized(min, animate) {
+      isMinimized = !!min;
+      applySheetPosition(isMinimized ? getMinimizedOffset() : 0, animate !== false);
+    }
+
+    function setCardHtml(headerHtml, bodyHtml) {
+      card.innerHTML =
+        '<div class="sheet-handle" id="sheet-handle">' +
+          '<div class="drag-pill"></div>' +
+          '<div class="sheet-header-row">' +
+            '<h3>' + headerHtml + '</h3>' +
+            '<span class="sheet-toggle-icon">' + (isMinimized ? '▲ Expand' : '▼ Minimize') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sheet-body">' + bodyHtml + '</div>';
+
+      var handle = $('sheet-handle');
+      if (!handle) return;
+
+      handle.addEventListener('touchstart', onDragStart, { passive: true });
+      handle.addEventListener('mousedown', onDragStart);
+      handle.addEventListener('click', function () {
+        if (!didDragMove) setMinimized(!isMinimized, true);
+      });
+    }
+
+    function onDragStart(e) {
+      isDragging = true;
+      didDragMove = false;
+      dragStartY = e.type.indexOf('mouse') !== -1 ? e.clientY : e.touches[0].clientY;
+      card.classList.add('dragging');
+    }
+
+    function onDragMove(e) {
+      if (!isDragging) return;
+      var clientY = e.type.indexOf('mouse') !== -1 ? e.clientY : e.touches[0].clientY;
+      var deltaY = clientY - dragStartY;
+      if (Math.abs(deltaY) > 5) didDragMove = true;
+
+      var maxOffset = getMinimizedOffset();
+      var base = isMinimized ? maxOffset : 0;
+      var nextY = Math.max(0, Math.min(maxOffset, base + deltaY));
+      applySheetPosition(nextY, false);
+    }
+
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      var maxOffset = getMinimizedOffset();
+      var threshold = maxOffset * 0.3;
+
+      if (!isMinimized && currentTranslateY > threshold) {
+        setMinimized(true, true);
+      } else if (isMinimized && currentTranslateY < maxOffset - threshold) {
+        setMinimized(false, true);
+      } else {
+        setMinimized(isMinimized, true);
+      }
+    }
+
+    window.addEventListener('touchmove', onDragMove, { passive: true });
+    window.addEventListener('touchend', onDragEnd);
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    window.addEventListener('resize', function () {
+      if (isMinimized) applySheetPosition(getMinimizedOffset(), false);
+    });
+
     /* ---------------- speech + arrow ---------------- */
     function speak(t) {
       if (!voiceOn || !('speechSynthesis' in window)) return;
@@ -160,14 +299,19 @@
     }
     function setArrow(dir, text) {
       curDir = dir || 'up'; curText = text || '';
-      if (camOn) { arrowStage.classList.remove('on'); return; }      // with the camera on, the arrow is drawn on the marker
+      if (camOn) { arrowStage.classList.remove('on'); return; }
       arrow.className = curDir; arrowStage.classList.add('on');
     }
 
     /* ---------------- a searchable list of rooms ---------------- */
     function picker(title, hint, onPick, extraHtml) {
-      card.innerHTML = '<h3>' + esc(title) + '</h3><p>' + hint + '</p>' + (extraHtml || '') +
-        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px"><input type="checkbox" id="sfree"' + (L.stepFree ? ' checked' : '') + '> <span>&#9855; Step-free route (for persons with disabilities)<br><small style="opacity:.8">The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.</small></span></label><input class="search" id="q" placeholder="Search a room or office…" autocomplete="off"><div class="results" id="res"></div>';
+      setCardHtml(
+        esc(title),
+        '<p>' + hint + '</p>' + (extraHtml || '') +
+        '<label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:14px"><input type="checkbox" id="sfree"' + (L.stepFree ? ' checked' : '') + '> <span>&#9855; Step-free route (for persons with disabilities)<br><small style="opacity:.8">The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.</small></span></label>' +
+        '<input class="search" id="q" placeholder="Search a room or office…" autocomplete="off">' +
+        '<div class="results" id="res"></div>'
+      );
       var q = $('q'), res = $('res');
       $('sfree').onchange = function () { L.setStepFree(this.checked); };
       function show() {
@@ -197,6 +341,7 @@
         arrowStage.classList.remove('on'); curDir = null;
         reticle.classList.toggle('on', scanning);
         picker('Where are you?', scanning ? 'Point the camera at a PLMUN Go QR code, or search your spot:' : 'Search the room you are closest to:', setHere);
+        setMinimized(false, true);
         return;
       }
       reticle.classList.toggle('on', scanning && !dest);
@@ -205,12 +350,17 @@
         arrowStage.classList.remove('on'); curDir = null;
         picker('Where do you want to go?', 'From <b>' + esc(here.name) + '</b> (' + esc(here.where) + ')', setDest,
           '<p class="note" style="margin-top:-4px">Tip: scan the next QR code on your way and the guide continues by itself.</p>');
+        setMinimized(false, true);
         return;
       }
 
       if (here.key === dest.key) {
         setArrow('arrive', '');
-        card.innerHTML = '<h3>You have arrived! 🎉</h3><p>' + esc(dest.name) + '<br><small>' + esc(dest.where) + '</small></p><div class="row"><button class="btn" id="again">Find another place</button></div>';
+        setCardHtml(
+          'You have arrived! 🎉',
+          '<p>' + esc(dest.name) + '<br><small>' + esc(dest.where) + '</small></p><div class="row"><button class="btn" id="again">Find another place</button></div>'
+        );
+        setMinimized(false, true);
         $('again').addEventListener('click', function () { dest = null; steps = []; render(); });
         speak('You have arrived at ' + dest.name);
         return;
@@ -220,8 +370,8 @@
       setArrow(st.dir, st.text);
       var last = stepIdx >= steps.length - 1;
       var photo = st.photo || (last ? 'images/rooms/' + dest.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.jpg' : '');
-      card.innerHTML =
-        '<h3>To ' + esc(dest.name) + '<span class="badge">step ' + (Math.min(stepIdx, steps.length - 1) + 1) + '/' + steps.length + '</span></h3>' +
+      setCardHtml(
+        'To ' + esc(dest.name) + '<span class="badge">step ' + (Math.min(stepIdx, steps.length - 1) + 1) + '/' + steps.length + '</span>',
         (photo ? '<img src="' + esc(photo) + '" alt="" onerror="this.remove()">' : '') +
         '<p>' + esc(st.text) + '</p>' +
         (camOn && stepIdx === 0 ? '<p class="note" style="margin:-4px 0 8px">Tip: hold your phone tilted a little down to see the arrows on the floor. Tap Aim if the arrow points the wrong way.</p>' : '') +
@@ -229,7 +379,9 @@
           (last ? '<button class="btn" id="arrived">I have arrived</button>' : '<button class="btn" id="next">Next step</button>') +
           (stepIdx > 0 ? '<button class="btn ghost" id="prev">Back</button>' : '') +
           (camOn ? '<button class="btn ghost" id="aim">🎯 Aim</button>' : '') +
-          '<button class="btn ghost" id="say">🔊 Read</button><button class="btn ghost" id="cancel">Cancel</button></div>';
+          '<button class="btn ghost" id="say">🔊 Read</button><button class="btn ghost" id="cancel">Cancel</button></div>'
+      );
+      setMinimized(false, true);
       var aimb = $('aim'); if (aimb) aimb.addEventListener('click', function () { aimNow(); if (navigator.vibrate) navigator.vibrate(40); });
       var nx = $('next'); if (nx) nx.addEventListener('click', function () { stepIdx++; render(); });
       var pv = $('prev'); if (pv) pv.addEventListener('click', function () { stepIdx--; render(); });
@@ -244,7 +396,7 @@
       anchorAz = fromCam ? azNow() : null;
       try { localStorage.setItem('plmun-here', r.name); localStorage.setItem('plmun-here-key', r.key); } catch (e) { }
       if (navigator.vibrate) navigator.vibrate(60);
-      if (dest) {                       // already navigating: recalculate from the new spot
+      if (dest) {
         if (here.key === dest.key) { steps = []; }
         else { steps = routeFor(here, dest); }
         stepIdx = 0;
@@ -263,7 +415,7 @@
     }
     function startScan() {
       startMarkers();
-      if (!('BarcodeDetector' in window)) {        // iPhone Safari and some browsers cannot read QR inside a page
+      if (!('BarcodeDetector' in window)) {
         var rs = document.querySelector('#reticle span');
         if (rs) rs.textContent = 'Point at a PLMUN Go marker, or scan the QR with your phone\u2019s Camera app';
         return;
@@ -284,7 +436,7 @@
 
     /* ---------------- marker tracking: the arrow is glued to the printed marker ---------------- */
     var markerTimer = null, mdet = null, grab = null, gctx = null, ovl = $('ovl'), octx = ovl.getContext('2d');
-    var track = null;             // { id, corners:[{x,y}] on screen, t }
+    var track = null;
     var seenId = -1, seenN = 0;
     var MK = window.PLMUN_MARKERS;
 
@@ -293,7 +445,7 @@
       ovl.width = Math.round(window.innerWidth * d); ovl.height = Math.round(window.innerHeight * d);
       octx.setTransform(d, 0, 0, d, 0, 0);
     }
-    function videoToScreen(p, sc, vw, vh) {      // the <video> is object-fit: cover
+    function videoToScreen(p, sc, vw, vh) {
       var s = Math.max(window.innerWidth / vw, window.innerHeight / vh);
       return { x: (p.x / sc) * s + (window.innerWidth - vw * s) / 2, y: (p.y / sc) * s + (window.innerHeight - vh * s) / 2 };
     }
@@ -309,20 +461,19 @@
       var now = Date.now();
       if (!best) { if (track && now - track.t > 700) track = null; return; }
       var cs = best.corners.map(function (c) { return videoToScreen(c, sc, vw, vh); });
-      if (track && track.id === best.id && now - track.t < 700) {          // smooth the jitter
+      if (track && track.id === best.id && now - track.t < 700) {
         cs = cs.map(function (c, i) { return { x: track.corners[i].x * 0.3 + c.x * 0.7, y: track.corners[i].y * 0.3 + c.y * 0.7 }; });
       }
       track = { id: best.id, corners: cs, t: now };
       if (best.id === seenId) seenN++; else { seenId = best.id; seenN = 1; }
       var room = BY_KEY[MK.rooms[best.id]];
       if (room && seenN >= 2 && (!here || here.key !== room.key)) setHere(room, true);
-      else if (room && here && here.key === room.key && seenN >= 2 && stepIdx === 0) { var az = azNow(); if (az != null) anchorAz = az; }   // still looking at the sign: keep the starting direction fresh
+      else if (room && here && here.key === room.key && seenN >= 2 && stepIdx === 0) { var az = azNow(); if (az != null) anchorAz = az; }
     }
 
-    /* ---- drawing in marker coordinates: (0,0)=marker top-left, (1,1)=bottom-right, y points DOWN ---- */
     var MS = window.PLMunMarker;
     function rot(p, a) { var c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c]; }
-    function ribbon(pts, wd) {                      // a thick line as a polygon
+    function ribbon(pts, wd) {
       var L = [], R = [], i;
       for (i = 0; i < pts.length; i++) {
         var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
@@ -331,13 +482,13 @@
       return L.concat(R.reverse());
     }
     var UP = [[0, -.5], [.42, -.02], [.17, -.02], [.17, .5], [-.17, .5], [-.17, -.02], [-.42, -.02]];
-    function glyph(dir, text) {                      // returns [{pts, fill}] in centred unit coords (marker side = 1)
+    function glyph(dir, text) {
       var vertical = /^go (up|down)/i.test(text || '');
       if (dir === 'arrive') {
         var ring = [], k; for (k = 0; k <= 24; k++) ring.push([Math.cos(k / 24 * 6.2832) * .42, Math.sin(k / 24 * 6.2832) * .42]);
         return [{ pts: ribbon(ring, .07), fill: '#22c55e' }, { pts: ribbon([[-.2, .02], [-.05, .17], [.22, -.16]], .07), fill: '#22c55e' }];
       }
-      if (/^take the elevator/i.test(text || '')) {      // elevator: a lift car with an up / down arrow
+      if (/^take the elevator/i.test(text || '')) {
         var goUp = /elevator up/i.test(text), car = [[-.42, -.5], [.42, -.5], [.42, .5], [-.42, .5]];
         var tri = goUp ? [[0, -.36], [.26, -.02], [-.26, -.02]] : [[0, .36], [.26, .02], [-.26, .02]];
         var stem = goUp ? [[-.09, -.04], [.09, -.04], [.09, .34], [-.09, .34]] : [[-.09, .04], [.09, .04], [.09, -.34], [-.09, -.34]];
@@ -349,10 +500,10 @@
         var ar = UP.map(function (p) { var q = rot([p[0] * .62, p[1] * .62], up ? 0 : Math.PI); return [q[0] + (up ? -.28 : .28), q[1] - .3]; });
         return [{ pts: st, fill: '#fde047' }, { pts: ar, fill: '#ffffff' }];
       }
-      if (dir === 'down') {                         // turn around (U-turn)
+      if (dir === 'down') {
         var u = [[.26, .46], [.26, -.02]], j; for (j = 0; j <= 10; j++) { var an = j / 10 * Math.PI; u.push([Math.cos(an) * .26, -.02 - Math.sin(an) * .26]); }
         u.push([-.26, .26]);
-        return [{ pts: ribbon(u, .085), fill: '#fde047' }, { pts: [[-.5, .22], [-.02, .22], [-.26, .5]].map(function (p) { return [p[0] + 0, p[1]]; }), fill: '#fde047' }];
+        return [{ pts: ribbon(u, .085), fill: '#fde047' }, { pts: [[-.5, .22], [-.02, .22], [-.26, .5]], fill: '#fde047' }];
       }
       var a = dir === 'left' ? -Math.PI / 2 : dir === 'right' ? Math.PI / 2 : 0;
       return [{ pts: UP.map(function (p) { return rot(p, a); }), fill: '#fde047' }];
@@ -365,12 +516,10 @@
       if (!track || Date.now() - track.t > 600) { drawWorldArrow(); return; }
       var H = MS.squareToQuad(track.corners), cs = track.corners, pulse = 1 + Math.sin(Date.now() / 260) * 0.05;
       function P(u, v) { return MS.applyH(H, u, v); }
-      // outline: "locked on"
       octx.lineWidth = 3; octx.strokeStyle = '#fde047'; octx.beginPath();
       cs.forEach(function (c, i) { if (i) octx.lineTo(c.x, c.y); else octx.moveTo(c.x, c.y); }); octx.closePath(); octx.stroke();
       var room = BY_KEY[MK.rooms[track.id]];
       var c0 = P(.5, .5), top = P(.5, 0);
-      // little tag above the marker
       var tx = top.x, ty = Math.max(24, top.y - 14);
       octx.font = '600 13px Poppins, Arial, sans-serif'; octx.textAlign = 'center';
       var label = room ? room.name : 'Marker', tw = octx.measureText(label).width + 20;
@@ -396,12 +545,11 @@
       requestAnimationFrame(drawOverlay);
     }
 
-    /* ---------------- phone direction: the arrow keeps pointing the right way after the sign leaves the camera ---------------- */
+    /* ---------------- phone direction ---------------- */
     var orient = { ok: false, c1: null, c2: null, c3: null }, anchorAz = null, DEG = Math.PI / 180;
     function onOrient(e) {
       if (e.alpha == null || e.beta == null || e.gamma == null) return;
       var a = e.alpha * DEG, b = e.beta * DEG, g = e.gamma * DEG, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cg = Math.cos(g), sg = Math.sin(g);
-      // columns = the phone's right / top / back axes in the world (x east, y north, z up)
       orient.c1 = [ca * cg - sa * sb * sg, cg * sa + ca * sb * sg, -cb * sg];
       orient.c2 = [-cb * sa, ca * cb, sb];
       orient.c3 = [ca * sg + cg * sa * sb, sa * sg - ca * cg * sb, cb * cg];
@@ -409,23 +557,23 @@
     }
     function startOrientation() {
       if (window.__orientOn) return; window.__orientOn = true;
-      window.addEventListener('deviceorientation', onOrient, true);       // listen first; iPhones only send events after the permission below
+      window.addEventListener('deviceorientation', onOrient, true);
       try {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
           var r = DeviceOrientationEvent.requestPermission(); if (r && r.catch) r.catch(function () { });
         }
       } catch (e) { }
     }
-    function azNow() {                        // which way the camera is looking (radians, clockwise from north)
+    function azNow() {
       if (!orient.ok) return null;
       var fx = -orient.c3[0], fy = -orient.c3[1];
-      if (Math.hypot(fx, fy) < 0.35) { fx = orient.c2[0]; fy = orient.c2[1]; }      // phone pointing at the floor/ceiling: use its top edge
+      if (Math.hypot(fx, fy) < 0.35) { fx = orient.c2[0]; fy = orient.c2[1]; }
       return Math.atan2(fx, fy);
     }
     function wrapPi(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
     function relOf(dir) { return dir === 'right' ? Math.PI / 2 : dir === 'left' ? -Math.PI / 2 : dir === 'down' ? Math.PI : 0; }
     function isVertical(st) { return /^(go (up|down)|take the elevator)/i.test(st.text || ''); }
-    function targetAz(i) {                    // the world direction to walk in for step i
+    function targetAz(i) {
       if (anchorAz == null || !steps[i]) return null;
       var b = anchorAz, j;
       for (j = 0; j < i; j++) { if (!isVertical(steps[j]) && steps[j].dir !== 'arrive') b += relOf(steps[j].dir); }
@@ -435,7 +583,7 @@
     }
     function aimNow() { var a = azNow(); if (a != null) { anchorAz = a; return true; } return false; }
 
-    function groundPt(t, s, T) {              // a point on the floor, t metres along the walking direction, s sideways
+    function groundPt(t, s, T) {
       var dx = Math.sin(T), dy = Math.cos(T), x = dx * t + dy * s, y = dy * t - dx * s, z = -1.4;
       var c1 = orient.c1, c2 = orient.c2, c3 = orient.c3;
       var vx = c1[0] * x + c1[1] * y + c1[2] * z, vy = c2[0] * x + c2[1] * y + c2[2] * z, vz = c3[0] * x + c3[1] * y + c3[2] * z;
@@ -460,10 +608,10 @@
       octx.font = '700 14px Poppins, Arial, sans-serif'; octx.textAlign = 'center'; octx.fillStyle = '#fff'; octx.shadowColor = '#000'; octx.shadowBlur = 6;
       octx.fillText(text, x, y + 62); octx.shadowBlur = 0;
     }
-    function drawWorldArrow() {                // sign out of view: draw the arrow in the world, using the phone's direction
+    function drawWorldArrow() {
       if (!dest || !steps.length || here && here.key === dest.key) return;
       var i = Math.min(stepIdx, steps.length - 1), st = steps[i], W = window.innerWidth, Hh = window.innerHeight;
-      if (isVertical(st) || st.dir === 'arrive') {          // stairs / elevator: big picture in the middle
+      if (isVertical(st) || st.dir === 'arrive') {
         glyph(st.dir, st.text).forEach(function (gl) {
           octx.beginPath(); gl.pts.forEach(function (p, k) { var X = W / 2 + p[0] * 150, Y = Hh * 0.36 + p[1] * 150; if (k) octx.lineTo(X, Y); else octx.moveTo(X, Y); });
           octx.closePath(); octx.fillStyle = gl.fill; octx.fill(); octx.lineWidth = 4; octx.strokeStyle = '#081e42'; octx.lineJoin = 'round'; octx.stroke();
@@ -474,12 +622,12 @@
       if (anchorAz == null) { hint('Face the sign, then tap  Aim', 0); return; }
       var T = targetAz(i), diff = wrapPi(T - azNow());
       var now = Date.now() / 1000, drew = false, k;
-      for (k = 0; k < 3; k++) {                // three chevrons sliding away from you along the floor
+      for (k = 0; k < 3; k++) {
         var t = 2.0 + k * 1.3 + (now * 0.9 % 1.3), a = 0.95 - k * 0.25;
         var pts = [[t, -0.6], [t + 0.5, 0], [t, 0.6], [t - 0.25, 0.6], [t + 0.25, 0], [t - 0.25, -0.6]].map(function (p) { return groundPt(p[0], p[1], T); });
         if (fillPoly(pts, '#fde047', Math.max(.35, a))) drew = true;
       }
-      if (!drew || Math.abs(diff) > 0.75) {    // not in view: tell which way to turn
+      if (!drew || Math.abs(diff) > 0.75) {
         if (Math.abs(diff) > 2.4) hint('Turn around', 0); else hint(diff > 0 ? 'Turn right' : 'Turn left', diff > 0 ? 1 : -1);
       }
     }
@@ -517,7 +665,7 @@
       if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
     });
 
-    window.PLMunAR = { ROOMS: ROOMS, route: function (a, b) { return routeFor(findRoom(a), findRoom(b)); } };   // handy for testing
+    window.PLMunAR = { ROOMS: ROOMS, route: function (a, b) { return routeFor(findRoom(a), findRoom(b)); } };
   })();
   </script>
 </body>
