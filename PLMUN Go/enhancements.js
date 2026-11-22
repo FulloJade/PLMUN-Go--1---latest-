@@ -211,7 +211,14 @@
         var p = R.parse(input.value);
         if (p.looksLikeRoute && !p.from && p.to) input.value = 'from ' + here.name + ' to ' + p.to;
       }
+
+      // Restore the user's original text in the search bar after the search runs
+      var originalText = pendingQuery;
+      setTimeout(function () {
+        if (input.value.trim()) input.value = originalText;
+      }, 0);
     }
+    
     send.addEventListener('click', beforeAsk, true);          // capture = runs first
     input.addEventListener('keypress', function (e) { if (e.key === 'Enter') beforeAsk(); }, true);
     var clear = $('#clear-btn');
