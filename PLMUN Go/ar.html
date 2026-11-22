@@ -36,7 +36,16 @@
     #reticle { position: absolute; left: 50%; top: 42%; width: 210px; height: 210px; transform: translate(-50%, -50%);
       border: 3px dashed rgba(253,224,71,.85); border-radius: 22px; pointer-events: none; animation: pulse 1.6s ease-in-out infinite; display: none; }
     #reticle.on { display: block; }
-    #reticle span { position: absolute; left: 0; right: 0; bottom: -34px; text-align: center; font-size: .85rem; text-shadow: 0 1px 4px #000; }
+   #reticle span {
+      position: absolute;
+      left: -24px;
+      right: -24px;
+      top: calc(100% + 12px);
+      text-align: center;
+      font-size: .85rem;
+      line-height: 1.4;
+      text-shadow: 0 1px 4px #000;
+    }
     @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.05); opacity: .7; } }
 
     /* the floating 3D arrow */
@@ -206,8 +215,7 @@
 
     function getMinimizedOffset() {
       var handle = card.querySelector('.sheet-handle');
-      if (!handle) return 0;
-      return Math.max(0, card.offsetHeight - handle.offsetHeight);
+      return handle ? Math.max(0, card.offsetHeight - handle.offsetHeight + 18) : 0;
     }
 
     function updateToggleLabel() {
