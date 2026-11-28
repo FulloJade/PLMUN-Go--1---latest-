@@ -26,6 +26,16 @@
     .grab small { font-weight: 500; opacity: .7; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .row select { flex: 1 1 150px; min-width: 0; padding: 10px; border-radius: 10px; border: 0; font-size: .88rem; font-family: inherit; }
+    .row select { display: none; }
+    .row .combo { flex: 1 1 150px; min-width: 0; }
+    .row .combo input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 10px; border: 0; font-size: .88rem; font-family: inherit; background: #fff; color: #081e42; }
+    .sug { position: fixed; z-index: 50; margin: 0; padding: 4px; list-style: none; background: #fff; color: #081e42; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45); overflow-y: auto; }
+    .sug[hidden] { display: none; }
+    .sug li { counter-increment: none; position: static; display: block; margin: 0; padding: 8px 10px; background: transparent; border-radius: 8px; font-size: .85rem; line-height: 1.3; cursor: pointer; }
+    .sug li::before { content: none; }
+    .sug li small { display: block; color: #64748b; font-size: .72rem; }
+    .sug li.on, .sug li:hover { background: #e0ecff; }
+    .sug li.none { color: #64748b; cursor: default; }
     .btn { border: 0; background: #fde047; color: #081e42; font-weight: 700; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: .88rem; }
     .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4); }
     ol { margin: 6px 0 0; padding: 0; list-style: none; counter-reset: s; }
@@ -62,7 +72,12 @@
   <div class="panel" id="panel">
     <div class="grab" id="grab"><span>🧭 Show a route</span><small id="gstate">tap to close</small></div>
     <div class="body">
-      <div class="row"><select id="from"></select><select id="to"></select></div>
+      <div class="row">
+        <div class="combo"><input id="from-q" type="text" placeholder="From: where are you?" autocomplete="off" aria-label="From"></div>
+        <div class="combo"><input id="to-q" type="text" placeholder="To: where to?" autocomplete="off" aria-label="To"></div>
+        <select id="from"></select><select id="to"></select>
+      </div>
+      <ul class="sug" id="sug" hidden></ul>
       <label style="display:flex;gap:8px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="stepfree"> <span>&#9855; Step-free route (for persons with disabilities)<br><small style="opacity:.8">The elevator is only for persons with disabilities, faculty and staff, and authorized guests. Students who do not need it should use the stairs.</small></span></label>
       <div class="row"><button class="btn" id="go">Show route</button><button class="btn ghost" id="swap">Swap</button><button class="btn ghost" id="clear">Clear</button></div>
       <ol id="steps"></ol>
@@ -945,7 +960,7 @@
       box.style.display = 'block';
       box.onclick = function (e) {
         var w = e.target.getAttribute && e.target.getAttribute('data-w'); if (!w) return;
-        if (w === 'from') $('from').value = r.key; if (w === 'to') $('to').value = r.key;
+        if (w === 'from') setSel('from', r.key); if (w === 'to') setSel('to', r.key);
         if (w === 'x') { box.style.display = 'none'; selRoom = null; return; }
         if ($('from').value && $('to').value) showRoute(); else { $('panel').classList.remove('min'); }
       };
@@ -983,6 +998,78 @@
       });
       $(sel).innerHTML = html;
     }
+    /* ----- type-to-search boxes for "From" and "To" (the hidden <select>s still hold the chosen room) ----- */
+    function roomLabel(r) { return r.name + (r.bk === 'campus' ? '' : ' · ' + r.floor + 'F'); }
+    function setSel(id, key) {
+      $(id).value = key;
+      var r = L.BY_KEY[key];
+      $(id + '-q').value = r ? roomLabel(r) : '';
+    }
+    (function combos() {
+      var sug = $('sug'), cur = null, items = [], hi = 0;
+      function plain(t) { return String(t).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+      function matches(q) {
+        var words = plain(q).split(' ').filter(Boolean);
+        return L.ROOMS.filter(function (r) {
+          var hay = plain(r.name + ' ' + (r.bk === 'campus' ? 'campus grounds' : BLD[r.bk].name + ' ' + r.floor + 'f floor ' + (L.ORD[r.floor] || '')));
+          return words.every(function (w) { return hay.indexOf(w) !== -1; });
+        });
+      }
+      function place(inp) {
+        var b = inp.getBoundingClientRect(), vh = window.innerHeight, below = vh - b.bottom - 10, above = b.top - 10;
+        var up = below < 180 && above > below;
+        sug.style.left = Math.max(8, b.left) + 'px';
+        sug.style.width = Math.min(Math.max(b.width, 240), window.innerWidth - 16) + 'px';
+        var h = Math.min(260, up ? above : below);
+        sug.style.maxHeight = h + 'px';
+        if (up) { sug.style.top = 'auto'; sug.style.bottom = (vh - b.top + 4) + 'px'; }
+        else { sug.style.bottom = 'auto'; sug.style.top = (b.bottom + 4) + 'px'; }
+      }
+      function paint() {
+        var inp = $(cur + '-q'), q = inp.value;
+        var sel = L.BY_KEY[$(cur).value];
+        items = matches(sel && q === roomLabel(sel) ? '' : q).slice(0, 40);
+        hi = 0;
+        sug.innerHTML = items.length ? '' : '<li class="none">No match. Try another word.</li>';
+        items.forEach(function (r, i) {
+          var li = document.createElement('li'); if (i === 0) li.className = 'on';
+          li.innerHTML = '<b></b><small></small>';
+          li.firstChild.textContent = r.name;
+          li.lastChild.textContent = (r.bk === 'campus' ? 'Campus grounds' : BLD[r.bk].name + ' · ' + L.ORD[r.floor] + ' floor');
+          li.setAttribute('data-i', i);
+          sug.appendChild(li);
+        });
+        place(inp); sug.hidden = false;
+      }
+      function close() { sug.hidden = true; cur = null; }
+      function pick(i) {
+        var r = items[i]; if (!r || !cur) return;
+        setSel(cur, r.key); close();
+        if ($('from').value && $('to').value) showRoute();
+      }
+      function mark() { Array.prototype.forEach.call(sug.children, function (li, i) { li.classList.toggle('on', i === hi); }); var on = sug.children[hi]; if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' }); }
+      ['from', 'to'].forEach(function (id) {
+        var inp = $(id + '-q');
+        inp.addEventListener('focus', function () { cur = id; inp.select(); paint(); });
+        inp.addEventListener('input', function () { cur = id; if (!inp.value) $(id).value = ''; paint(); });
+        inp.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowDown') { e.preventDefault(); if (hi < items.length - 1) { hi++; mark(); } }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); if (hi > 0) { hi--; mark(); } }
+          else if (e.key === 'Enter') { e.preventDefault(); pick(hi); inp.blur(); }
+          else if (e.key === 'Escape') { close(); inp.blur(); }
+        });
+        inp.addEventListener('blur', function () {
+          setTimeout(function () { // put the chosen room's name back if the typed text was not picked
+            var r = L.BY_KEY[$(id).value]; inp.value = r ? roomLabel(r) : '';
+            if (cur === id) close();
+          }, 120);
+        });
+      });
+      sug.addEventListener('mousedown', function (e) { e.preventDefault(); });   // keep the input focused
+      sug.addEventListener('click', function (e) { var li = e.target.closest('li[data-i]'); if (li) pick(parseInt(li.getAttribute('data-i'), 10)); });
+      window.addEventListener('resize', function () { if (cur) place($(cur + '-q')); });
+    })();
+
     function showRoute() {
       var a = L.BY_KEY[$('from').value], b = L.BY_KEY[$('to').value];
       if (!a || !b) { $('steps').innerHTML = '<li>Pick where you are and where you want to go.</li>'; return; }
@@ -1003,8 +1090,8 @@
     $('stepfree').checked = !!L.stepFree;
     $('stepfree').onchange = function () { L.setStepFree(this.checked); if ($('from').value && $('to').value) showRoute(); };
     $('go').onclick = showRoute;
-    $('swap').onclick = function () { var t = $('from').value; $('from').value = $('to').value; $('to').value = t; if ($('from').value && $('to').value) showRoute(); };
-    $('clear').onclick = function () { route = null; $('steps').innerHTML = ''; $('from').value = ''; $('to').value = ''; setFocus(null); };
+    $('swap').onclick = function () { var t = $('from').value; setSel('from', $('to').value); setSel('to', t); if ($('from').value && $('to').value) showRoute(); };
+    $('clear').onclick = function () { route = null; $('steps').innerHTML = ''; setSel('from', ''); setSel('to', ''); setFocus(null); };
     $('grab').onclick = function () { var p = $('panel'); p.classList.toggle('min'); $('gstate').textContent = p.classList.contains('min') ? 'tap to open' : 'tap to hide'; };
 
     window.addEventListener('resize', resize);
@@ -1013,8 +1100,8 @@
     // ?from=...&to=... opens a route straight away (handy for QR codes)
     try {
       var q = new URLSearchParams(location.search);
-      if (q.get('from')) { var a = L.find(q.get('from')); if (a) $('from').value = a.key; }
-      if (q.get('to')) { var b = L.find(q.get('to')); if (b) $('to').value = b.key; }
+      if (q.get('from')) { var a = L.find(q.get('from')); if (a) setSel('from', a.key); }
+      if (q.get('to')) { var b = L.find(q.get('to')); if (b) setSel('to', b.key); }
       if ($('from').value && $('to').value) showRoute();
     } catch (e) { }
     window.PLMun3D = { showRoute: showRoute, setFocus: setFocus, cam: cam, G: G, setFloor: function (n) { floorSel = n; chips(); } };
