@@ -1,8 +1,8 @@
 /* PLMUN Go service worker: lets the site open with weak or no signal.
    Pages/scripts: network first (so updates show), cache as backup. Images: cache after first view. */
-const CACHE = 'plmun-go-v1';
+const CACHE = 'plmun-go-v2';
 const CORE = ['index.html','about.html','contact.html','student.html','organization.html','admissions.html','programs.html','news.html',
-  'campuslife.html','map3d.html','ar.html','style.css','script.js','routes.js','directions.js','enhancements.js','interactive.js',
+  'campuslife.html','privacy.html','map3d.html','ar.html','style.css','script.js','routes.js','directions.js','enhancements.js','interactive.js',
   'markers.js','aruco.js','manifest.webmanifest','images/plmunlogo.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));

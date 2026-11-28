@@ -64,6 +64,23 @@
     b.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }); });
   }
 
+  /* ------------------------------------------ keep floating buttons above the footer */
+  function initFooterLift() {
+    var foot = document.querySelector('footer');
+    if (!foot) return;
+    var root = document.documentElement, ticking = false;
+    function update() {
+      ticking = false;
+      var top = foot.getBoundingClientRect().top;
+      var lift = Math.max(0, window.innerHeight - top);   // how much of the footer is on screen
+      root.style.setProperty('--lift', lift + 'px');
+    }
+    function request() { if (!ticking) { ticking = true; window.requestAnimationFrame(update); } }
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
+    update();
+  }
+
   /* -------------------------------------------------------------- lightbox */
   function initLightbox() {
     var imgs = $$('.equal-item img, .auto-slide img, .single-slide img, .map-section img, .campus-map-img');
@@ -394,7 +411,7 @@
 
   /* ----------------------------------------------------------------- start */
   document.addEventListener('DOMContentLoaded', function () {
-    var parts = [initReveal, initBackToTop, initLightbox, initPageChips, initPrograms, initNews,
+    var parts = [initReveal, initBackToTop, initFooterLift, initLightbox, initPageChips, initPrograms, initNews,
       initAdmissions, initOrganization, initStudentLinks, initCampusLifeLinks, initHomeArrivals];
     parts.forEach(function (fn) {
       try { fn(); } catch (e) { if (window.console) console.warn('interactive.js:', fn.name, e); }
